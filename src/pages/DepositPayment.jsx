@@ -71,11 +71,10 @@ const DepositPayment = () => {
     // formData.append('_token', csrfToken);
 
     try {
-      const res = await fetch('http://localhost:5000/api/deposits', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/deposits`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
-          // Do NOT set Content-Type when using FormData, browser will set boundary
         },
         body: formData,
       });
