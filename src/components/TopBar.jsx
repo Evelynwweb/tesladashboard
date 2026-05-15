@@ -7,6 +7,15 @@ const TopBar = ({ onMenuClick }) => {
   const { dark, toggleDark } = useTheme();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    // Optional: remove other items if you store them
+    // localStorage.removeItem('user');
+    window.location.replace('/login');
+  };
+
+
   return (
     <header className="flex h-16 items-center justify-between px-4 sm:px-6 border-b border-light-200 dark:border-dark-100 bg-light-100 dark:bg-dark-50 shadow-md sticky top-0 z-[9999]">
       <div className="flex items-center gap-4">
@@ -73,8 +82,8 @@ const TopBar = ({ onMenuClick }) => {
                 </Link>
               </div>
               <div className="py-2 border-t border-light-200 dark:border-dark-100">
-                <button
-                  onClick={() => {/* logout logic */}}
+                 <button
+                  onClick={handleLogout}
                   className="flex items-center gap-2 px-4 py-2 text-sm text-danger w-full text-left hover:bg-light-200/60 dark:hover:bg-dark-100/60"
                 >
                   <LogOut className="h-4 w-4" />
