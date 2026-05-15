@@ -43,7 +43,7 @@ const PreRegisterVerification = () => {
       return;
     }
     try {
-      const res = await fetch('http://localhost:5000/api/verify-code', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/verify-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, code: data.code })
