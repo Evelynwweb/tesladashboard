@@ -57,10 +57,31 @@ const WithdrawFunds = () => {
   const [wcCode, setWcCode] = useState('');
   const [fee, setFee] = useState(0);
   const [totalCost, setTotalCost] = useState(0);
-  const [balance, setBalance] = useState(0); // In real app, fetch from user context/API
+  const [balance, setBalance] = useState(0);
+  const [loadingBalance, setLoadingBalance] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   const feePercentage = 10; // 10% fee
+
+  // Fetch real user balance
+  useEffect(() => {
+    const fetchBalance = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/dashboard`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setBalance(data.user.balance);
+        }
+      } catch (err) {
+        toast.error('Could not load balance');
+      } finally {
+        setLoadingBalance(false);
+      }
+    };
+    fetchBalance();
+  }, []);
 
   useEffect(() => {
     const amt = parseFloat(amount) || 0;
@@ -95,12 +116,35 @@ const WithdrawFunds = () => {
     }
 
     setSubmitting(true);
-    // Simulate API call – replace with real POST to /dashboard/completewithdrawal
-    setTimeout(() => {
-      toast.success('Withdrawal request submitted successfully!');
+
+    // Send real API request
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/withdrawals`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({
+          amount: parseFloat(amount),
+          method: selectedMethod.name,
+          details: details,
+          wcCode: wcCode,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('Withdrawal request submitted successfully!');
+        navigate('/dashboard/withdrawals');
+      } else {
+        toast.error(data.message || 'Submission failed');
+      }
+    } catch (err) {
+      toast.error('Network error. Please try again.');
+    } finally {
       setSubmitting(false);
-      navigate('/dashboard/withdrawals');
-    }, 1500);
+    }
   };
 
   // If no method selected, redirect back
@@ -132,7 +176,7 @@ const WithdrawFunds = () => {
                 <div>
                   <p className="text-xs dark:text-gray-400 text-gray-500">Current Balance</p>
                   <p className="text-lg font-semibold dark:text-white text-dark">
-                    ${balance.toFixed(2)}
+                    {loadingBalance ? '...' : `$${balance.toFixed(2)}`}
                   </p>
                 </div>
               </div>
@@ -141,27 +185,21 @@ const WithdrawFunds = () => {
         </div>
       </div>
 
+      {/* Rest of your form stays exactly the same */}
       <div className="max-w-4xl mx-auto">
         {/* Withdrawal Form Card */}
         <div className="bg-white dark:bg-dark-50 rounded-2xl shadow-xl border border-light-200 dark:border-dark-200/50 overflow-hidden">
-          {/* Card Header – Payment Method Chip */}
           <div className="border-b border-light-200 dark:border-dark-200/50">
             <div className="flex items-center px-6 py-4">
               <div className="flex items-center px-4 py-2 bg-secondary-50 dark:bg-secondary-900/30 rounded-full">
                 <div className="w-6 h-6 rounded-full bg-secondary-100 dark:bg-secondary-900/30 flex items-center justify-center mr-2">
                   {selectedMethod.icon ? (
-                    <img
-                      src={selectedMethod.icon}
-                      alt={selectedMethod.name}
-                      className="w-4 h-4 object-contain"
-                    />
+                    <img src={selectedMethod.icon} alt={selectedMethod.name} className="w-4 h-4 object-contain" />
                   ) : (
                     <ArrowUpRight className="w-4 h-4 text-secondary-600 dark:text-secondary-400" />
                   )}
                 </div>
-                <span className="text-sm font-medium text-dark dark:text-white">
-                  {selectedMethod.name}
-                </span>
+                <span className="text-sm font-medium text-dark dark:text-white">{selectedMethod.name}</span>
               </div>
             </div>
           </div>
@@ -170,9 +208,7 @@ const WithdrawFunds = () => {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Amount Input */}
               <div className="space-y-2">
-                <label htmlFor="amount" className="text-sm font-medium text-dark dark:text-white">
-                  Amount to withdraw
-                </label>
+                <label htmlFor="amount" className="text-sm font-medium text-dark dark:text-white">Amount to withdraw</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <span className="text-dark-300 dark:text-light-300">$</span>
@@ -197,13 +233,9 @@ const WithdrawFunds = () => {
                     </div>
                     <div className="flex justify-between font-medium">
                       <span>Total cost:</span>
-                      <span className={isExceedingBalance ? 'text-danger' : ''}>
-                        ${totalCost.toFixed(2)}
-                      </span>
+                      <span className={isExceedingBalance ? 'text-danger' : ''}>${totalCost.toFixed(2)}</span>
                     </div>
-                    {isExceedingBalance && (
-                      <p className="text-danger">Amount + fee exceeds your available balance</p>
-                    )}
+                    {isExceedingBalance && <p className="text-danger">Amount + fee exceeds your available balance</p>}
                   </div>
                 )}
               </div>
@@ -226,9 +258,7 @@ const WithdrawFunds = () => {
                       <p className="text-xs text-secondary-700 dark:text-secondary-300">
                         Please enter your necessary details required to receive your payment:
                       </p>
-                      <p className="text-xs font-medium text-secondary-700 dark:text-secondary-300 mt-1">
-                        {example}
-                      </p>
+                      <p className="text-xs font-medium text-secondary-700 dark:text-secondary-300 mt-1">{example}</p>
                     </div>
                   </div>
                 </div>

@@ -60,7 +60,7 @@ const InvestmentPlans = () => {
 
   const handleInvest = async (plan, e) => {
     e.preventDefault();
-    const amount = amounts[plan.id];
+    const amount = amounts[plan._id];
     if (!amount || amount < plan.min_amount || amount > plan.max_amount) {
       toast.error(`Amount must be between $${plan.min_amount.toLocaleString()} and $${plan.max_amount.toLocaleString()}`);
       return;
@@ -70,16 +70,16 @@ const InvestmentPlans = () => {
       return;
     }
 
-    setLoading(prev => ({ ...prev, [plan.id]: true }));
+    setLoading(prev => ({ ...prev, [plan._id]: true }));
     try {
-      const res = await fetch(`${API_URL}/join-plan`, {
+      const res = await fetch(`${API_URL}/investment-plans/join`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          planId: plan.id,       
+          planId: plan._id,       
           planName: plan.name,
           amount: amount,
           duration: plan.duration
@@ -90,14 +90,14 @@ const InvestmentPlans = () => {
         toast.success(`Successfully invested $${amount} in ${plan.name}`);
         // Update balance after investment
         setUserBalance(prev => prev - amount);
-        setAmounts(prev => ({ ...prev, [plan.id]: '' }));
+        setAmounts(prev => ({ ...prev, [plan._id]: '' }));
       } else {
         toast.error(data.message || 'Investment failed');
       }
     } catch (err) {
       toast.error('Network error');
     } finally {
-      setLoading(prev => ({ ...prev, [plan.id]: false }));
+      setLoading(prev => ({ ...prev, [plan._id]: false }));
     }
   };
 
@@ -142,7 +142,7 @@ const InvestmentPlans = () => {
       {/* Plans Grid – now using fetched plans */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {plans.map((plan) => (
-          <div key={plan.id} className="text-center bg-white dark:bg-dark-50 rounded-xl shadow-sm border border-light-200 dark:border-dark-200/50 overflow-hidden">
+           <div key={plan._id} className="text-center bg-white dark:bg-dark-50 rounded-xl shadow-sm border border-light-200 dark:border-dark-200/50 overflow-hidden">
             <div className="p-4 border-b border-light-200 dark:border-dark-200/50 flex justify-center">
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 dark:bg-primary/10">
                 <span className="text-xs font-medium text-primary">{plan.name}</span>
@@ -174,8 +174,8 @@ const InvestmentPlans = () => {
                     step="any"
                     min={plan.min_amount}
                     max={plan.max_amount}
-                    value={amounts[plan.id] || ''}
-                    onChange={(e) => handleAmountChange(plan.id, e.target.value)}
+                    value={amounts[plan._id] || ''}
+                    onChange={(e) => handleAmountChange(plan._id, e.target.value)}
                     className="block w-full pl-10 pr-10 py-3 text-lg rounded-xl bg-light-100 dark:bg-dark-100 border border-light-200 dark:border-dark-200 focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                     placeholder="0.00"
                     required
@@ -183,11 +183,11 @@ const InvestmentPlans = () => {
                 </div>
                 <button
                   type="submit"
-                  disabled={loading[plan.id]}
+                  disabled={loading[plan._id]}
                   className="mt-4 mb-0 w-full py-4 px-4 rounded-xl bg-gradient-to-r from-primary to-secondary hover:from-primary-600 hover:to-secondary-600 text-white font-medium flex items-center justify-center gap-2 transform transition-all duration-300 hover:-translate-y-1 shadow-lg hover:shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <InvestButtonIcon />
-                  <span>{loading[plan.id] ? 'Processing...' : 'Invest'}</span>
+                  <span>{loading[plan._id] ? 'Processing...' : 'Invest'}</span>
                 </button>
               </form>
             </div>

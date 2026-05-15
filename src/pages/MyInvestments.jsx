@@ -1,7 +1,9 @@
+import { useState, useEffect } from 'react';
 import { Wallet } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
-// SVG Icons used in the page
+// SVG icons (unchanged)
 const InfoCircleIcon = () => (
   <svg className="w-10 h-10 text-dark-300 dark:text-light-300" viewBox="0 0 24 24" fill="none">
     <path d="M12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22Z" fill="currentColor" fillOpacity="0.2" />
@@ -21,9 +23,47 @@ const BuyPlanIcon = () => (
 );
 
 const MyInvestments = () => {
+  // ---- hooks are INSIDE the component function ----
+  const [investments, setInvestments] = useState([]);
+  const [totalInvested, setTotalInvested] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchInvestments = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/investments/my`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          // your backend returns { totalInvested, investments }
+          setInvestments(data.investments);
+          setTotalInvested(data.totalInvested);
+        } else {
+          toast.error('Could not load investments');
+        }
+      } catch (err) {
+        toast.error('Network error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInvestments();
+  }, []);
+
+  // ---- loading screen ----
+  if (loading) {
+    return (
+      <div className="p-4 md:p-6 flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // ---- main UI ----
   return (
     <div className="p-4 md:p-6 pb-20 md:pb-8 overflow-x-hidden flex-grow">
-      {/* Page Header */}
+      {/* Header (dynamic total) */}
       <div className="relative mb-8">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-3xl -z-10 blur-xl opacity-50" />
         <div className="px-6 py-8 rounded-3xl bg-gradient-to-r from-primary/5 to-secondary/5 backdrop-blur-sm border border-white/10">
@@ -39,7 +79,9 @@ const MyInvestments = () => {
                 </div>
                 <div>
                   <p className="text-xs dark:text-gray-400 text-gray-500">Total Investments</p>
-                  <p className="text-lg font-semibold dark:text-white text-dark">$0.00</p>
+                  <p className="text-lg font-semibold dark:text-white text-dark">
+                    ${totalInvested.toLocaleString()}
+                  </p>
                 </div>
               </div>
             </div>
@@ -47,26 +89,50 @@ const MyInvestments = () => {
         </div>
       </div>
 
-      {/* Main Content: Empty State */}
+      {/* Content */}
       <div className="space-y-6">
-        <div className="bg-white dark:bg-dark-50 rounded-xl shadow-sm border border-light-200 dark:border-dark-200/50 p-10 text-center">
-          <div className="flex flex-col items-center justify-center">
-            <div className="w-20 h-20 rounded-full bg-light-100 dark:bg-dark-100 flex items-center justify-center mb-4">
-              <InfoCircleIcon />
+        {investments.length === 0 ? (
+          <div className="bg-white dark:bg-dark-50 rounded-xl shadow-sm border border-light-200 dark:border-dark-200/50 p-10 text-center">
+            <div className="flex flex-col items-center justify-center">
+              <div className="w-20 h-20 rounded-full bg-light-100 dark:bg-dark-100 flex items-center justify-center mb-4">
+                <InfoCircleIcon />
+              </div>
+              <h3 className="text-xl font-bold text-dark dark:text-white mb-2">No Investment Plans</h3>
+              <p className="text-dark-300 dark:text-light-300 mb-6 max-w-md mx-auto">
+                You do not have an investment plan at the moment or no value match your query.
+              </p>
+              <Link
+                to="/dashboard/buy-plan"
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-primary to-secondary hover:from-primary-600 hover:to-secondary-600 text-white font-medium inline-flex items-center gap-2 transform transition-all duration-300 hover:-translate-y-1 shadow-lg hover:shadow-primary/20"
+              >
+                <BuyPlanIcon />
+                <span>Buy a plan</span>
+              </Link>
             </div>
-            <h3 className="text-xl font-bold text-dark dark:text-white mb-2">No Investment Plans</h3>
-            <p className="text-dark-300 dark:text-light-300 mb-6 max-w-md mx-auto">
-              You do not have an investment plan at the moment or no value match your query.
-            </p>
-            <Link
-              to="/dashboard/buy-plan"
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-primary to-secondary hover:from-primary-600 hover:to-secondary-600 text-white font-medium inline-flex items-center gap-2 transform transition-all duration-300 hover:-translate-y-1 shadow-lg hover:shadow-primary/20"
-            >
-              <BuyPlanIcon />
-              <span>Buy a plan</span>
-            </Link>
           </div>
-        </div>
+        ) : (
+          investments.map(inv => (
+            <div key={inv._id} className="bg-white dark:bg-dark-50 rounded-xl shadow-sm border border-light-200 dark:border-dark-200/50 p-5">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-bold text-dark dark:text-white text-lg">{inv.planName}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Invested: ${inv.amount.toLocaleString()} | ROI: {inv.roiPercentage}%
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Duration: {inv.duration} | Started: {new Date(inv.startDate).toLocaleDateString()}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Ends: {new Date(inv.endDate).toLocaleDateString()}
+                  </p>
+                </div>
+                <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">
+                  {inv.status}
+                </span>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

@@ -1,68 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Wallet } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-const stocks = [
-  {
-    id: 26,
-    name: 'COCA-COLA',
-    symbol: 'NYSE:KO',
-    min: 5000,
-    max: 1000000,
-    duration: '12 Months',
-  },
-  {
-    id: 27,
-    name: 'SHOPIFY INC',
-    symbol: 'NYSE:SHOP',
-    min: 3000,
-    max: 10000000,
-    duration: '12 Months',
-  },
-  {
-    id: 28,
-    name: 'TESLA, INC',
-    symbol: 'NASDAQ:TSLA',
-    min: 5000,
-    max: 10000000,
-    duration: '6 Months',
-  },
-  {
-    id: 29,
-    name: 'META PLATFORMS, INC',
-    symbol: 'NASDAQ:META',
-    min: 3000,
-    max: 10000000,
-    duration: '12 Months',
-  },
-  {
-    id: 30,
-    name: 'AMAZON.COM INC.',
-    symbol: 'NASDAQ:AMZN',
-    min: 3000,
-    max: 10000000,
-    duration: '6 Months',
-  },
-  {
-    id: 35,
-    name: 'NETFLIX',
-    symbol: 'NASDAQ:NFLX',
-    min: 3000,
-    max: 10000000,
-    duration: '6 Months',
-  },
-  {
-    id: 36,
-    name: 'AAPL',
-    symbol: 'NASDAQ:AAPL',
-    min: 5000,
-    max: 10000000,
-    duration: '6 Months',
-  },
-]
-
 const TradingViewWidget = ({ symbol }) => {
-  // Build the iframe URL exactly as the original HTML uses
   const widgetUrl = `https://s.tradingview.com/widgetembed/?frameElementId=tradingview_${symbol.replace(/[^a-zA-Z]/g, '')}&symbol=${symbol}&interval=1&hidesidetoolbar=1&theme=dark&style=1&timezone=Etc/UTC&studies=[]`
 
   return (
@@ -94,29 +34,98 @@ const InvestButtonIcon = () => (
 )
 
 const Stocks = () => {
+  const [stocks, setStocks] = useState([])
+  const [balance, setBalance] = useState(0)
   const [amounts, setAmounts] = useState({})
   const [loading, setLoading] = useState({})
+  const [pageLoading, setPageLoading] = useState(true)
 
-  const handleAmountChange = (id, value) => {
-    setAmounts((prev) => ({ ...prev, [id]: value }))
+  const API_URL = import.meta.env.VITE_API_URL
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [stocksRes, balanceRes] = await Promise.all([
+          fetch(`${API_URL}/stocks`),
+          fetch(`${API_URL}/dashboard`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          })
+        ])
+        const stocksData = await stocksRes.json()
+        const balanceData = await balanceRes.json()
+
+        if (stocksRes.ok) {
+          setStocks(stocksData)
+        } else {
+          toast.error('Could not load stocks')
+        }
+        if (balanceRes.ok) {
+          setBalance(balanceData.user.balance)
+        }
+      } catch (err) {
+        toast.error('Network error')
+      } finally {
+        setPageLoading(false)
+      }
+    }
+    fetchData()
+  }, [API_URL])
+
+  const handleAmountChange = (stockId, value) => {
+    setAmounts(prev => ({ ...prev, [stockId]: value }))
   }
 
   const handleSubmit = async (stock, e) => {
     e.preventDefault()
-    const amount = amounts[stock.id]
+    const amount = amounts[stock.stockId]
 
     if (!amount || amount < stock.min || amount > stock.max) {
       toast.error(`Amount must be between $${stock.min.toLocaleString()} and $${stock.max.toLocaleString()}`)
       return
     }
+    if (amount > balance) {
+      toast.error('Insufficient balance. Please deposit first.')
+      return
+    }
 
-    setLoading((prev) => ({ ...prev, [stock.id]: true }))
+    setLoading(prev => ({ ...prev, [stock.stockId]: true }))
 
-    // Simulate API call – replace with actual POST to /dashboard/buystocks
-    setTimeout(() => {
-      toast.success(`Successfully invested $${amount} in ${stock.name}`)
-      setLoading((prev) => ({ ...prev, [stock.id]: false }))
-    }, 1000)
+    try {
+      const res = await fetch(`${API_URL}/stocks/invest`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          stockId: stock.stockId,
+          stockName: stock.name,
+          symbol: stock.symbol,
+          amount,
+          duration: stock.duration
+        })
+      })
+      const data = await res.json()
+      if (res.ok) {
+        toast.success(`Successfully invested $${amount} in ${stock.name}`)
+        setBalance(prev => prev - amount)
+        setAmounts(prev => ({ ...prev, [stock.stockId]: '' }))
+      } else {
+        toast.error(data.message || 'Investment failed')
+      }
+    } catch (err) {
+      toast.error('Network error')
+    } finally {
+      setLoading(prev => ({ ...prev, [stock.stockId]: false }))
+    }
+  }
+
+  if (pageLoading) {
+    return (
+      <div className="p-4 md:p-6 flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    )
   }
 
   return (
@@ -137,7 +146,7 @@ const Stocks = () => {
                 </div>
                 <div>
                   <p className="text-xs dark:text-gray-400 text-gray-500">Your Balance</p>
-                  <p className="text-lg font-semibold dark:text-white text-dark">$0</p>
+                  <p className="text-lg font-semibold dark:text-white text-dark">${balance.toLocaleString()}</p>
                 </div>
               </div>
             </div>
@@ -150,28 +159,20 @@ const Stocks = () => {
         <div className="space-y-6">
           <div className="rounded-2xl overflow-hidden bg-white dark:bg-dark-50 shadow-xl shadow-primary/5 dark:shadow-primary/10 border border-light-200/50 dark:border-dark-200/50">
             <div className="p-6 border-b border-light-200/50 dark:border-dark-200/50">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <h2 className="text-xl font-semibold dark:text-white text-dark flex items-center">
-                  <i className="fas fa-robot mr-2 text-primary"></i>
-                  Stock Options
-                </h2>
-              </div>
+              <h2 className="text-xl font-semibold dark:text-white text-dark">Stock Options</h2>
             </div>
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {stocks.map((stock) => (
-                  <div key={stock.id} className="text-center bg-white dark:bg-dark-50 rounded-xl shadow-sm border border-light-200 dark:border-dark-200/50 overflow-hidden">
-                    {/* Stock Name Badge */}
+                {stocks.map(stock => (
+                  <div key={stock.stockId} className="text-center bg-white dark:bg-dark-50 rounded-xl shadow-sm border border-light-200 dark:border-dark-200/50 overflow-hidden">
                     <div className="p-4 border-b border-light-200 dark:border-dark-200/50 flex justify-center">
                       <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 dark:bg-primary/10">
                         <span className="text-xs font-medium text-primary">{stock.name}</span>
                       </div>
                     </div>
 
-                    {/* TradingView Widget */}
                     <TradingViewWidget symbol={stock.symbol} />
 
-                    {/* Investment Details */}
                     <ul className="my-3 space-y-2">
                       <li className="mb-2">
                         <small className="text-gray-500 dark:text-gray-400">Min. Investment</small>
@@ -183,36 +184,32 @@ const Stocks = () => {
                       </li>
                     </ul>
 
-                    {/* Investment Form */}
                     <div className="mt-5 px-5 border-t border-light-200 dark:border-dark-200/50 pt-4 pb-5">
                       <form onSubmit={(e) => handleSubmit(stock, e)}>
-                        <label htmlFor={`amount-${stock.id}`} className="text-sm font-medium text-dark dark:text-white mb-8">Amount to Invest</label>
+                        <label className="text-sm font-medium text-dark dark:text-white mb-8">Amount to Invest</label>
                         <div className="relative mt-3">
                           <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
                             <span className="text-dark-300 dark:text-light-300">$</span>
                           </div>
                           <input
-                            id={`amount-${stock.id}`}
                             type="number"
                             step="any"
                             min={stock.min}
                             max={stock.max}
-                            value={amounts[stock.id] || ''}
-                            onChange={(e) => handleAmountChange(stock.id, e.target.value)}
+                            value={amounts[stock.stockId] || ''}
+                            onChange={(e) => handleAmountChange(stock.stockId, e.target.value)}
                             className="block w-full pl-10 pr-10 py-3 text-lg rounded-xl bg-light-100 dark:bg-dark-100 border border-light-200 dark:border-dark-200 focus:ring-2 focus:ring-primary focus:border-transparent text-dark dark:text-white transition-all"
                             placeholder="0.00"
                             required
                           />
                         </div>
-                        <input type="hidden" name="duration" value={stock.duration} />
-                        <input type="hidden" name="id" value={stock.id} />
                         <button
                           type="submit"
-                          disabled={loading[stock.id]}
+                          disabled={loading[stock.stockId]}
                           className="mt-4 w-full py-4 px-4 rounded-xl bg-gradient-to-r from-primary to-secondary hover:from-primary-600 hover:to-secondary-600 text-white font-medium flex items-center justify-center gap-2 transform transition-all duration-300 hover:-translate-y-1 shadow-lg hover:shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <InvestButtonIcon />
-                          <span>{loading[stock.id] ? 'Processing...' : 'Invest'}</span>
+                          <span>{loading[stock.stockId] ? 'Processing...' : 'Invest'}</span>
                         </button>
                       </form>
                     </div>
