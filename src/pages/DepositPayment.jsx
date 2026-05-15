@@ -57,40 +57,40 @@ const DepositPayment = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!proofFile) {
-      toast.error('Please upload payment proof');
-      return;
-    }
-    setSubmitting(true);
-    const formData = new FormData();
-    formData.append('amount', amount);
-    formData.append('payment_method_id', methodId);
-    formData.append('proof', proofFile);
-    // Add CSRF token if needed
-    // formData.append('_token', csrfToken);
+  e.preventDefault();
+  if (!proofFile) {
+    toast.error('Please upload payment proof');
+    return;
+  }
 
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/deposits`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: formData,
-      });
-      const data = await res.json();
-      if (res.ok) {
-        toast.success('Deposit request submitted!');
-        navigate('/dashboard/accounthistory');
-      } else {
-        toast.error(data.message || 'Submission failed');
-      }
-    } catch (err) {
-      toast.error('Network error');
-    } finally {
-      setSubmitting(false);
+  setSubmitting(true);
+
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/deposits`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: JSON.stringify({
+        amount: amount,
+        payment_method: methodId,   // e.g. '22', '17', etc.
+      }),
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      toast.success('Deposit request submitted!');
+      navigate('/dashboard/accounthistory');
+    } else {
+      toast.error(data.message || 'Submission failed');
     }
-  };
+  } catch (err) {
+    toast.error('Network error');
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   return (
     <div className="p-4 md:p-6 pb-20 md:pb-8 overflow-x-hidden flex-grow">
