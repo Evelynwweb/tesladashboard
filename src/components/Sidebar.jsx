@@ -1,9 +1,30 @@
+import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Home, Download, History, Upload, Link, Briefcase, Blocks, CopySlash, Bot, Folder, TrendingUp, Users, Settings, Wallet, Shield } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { dark } = useTheme();
+  const [balance, setBalance] = useState(0);
+
+   useEffect(() => {
+    const fetchBalance = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/dashboard`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setBalance(data.user.balance);
+        }
+      } catch (err) {
+        console.error('Sidebar balance fetch failed', err);
+      }
+    };
+    fetchBalance();
+  }, []);
 
   const navItemsMain = [
     { to: '/dashboard', icon: Home, label: 'Dashboard' },
@@ -77,7 +98,9 @@ const Sidebar = ({ isOpen, onClose }) => {
                   </div>
                   <div>
                     <span className="text-xs text-gray-600 dark:text-gray-400 block">Balance</span>
-                    <span className="text-sm font-medium dark:text-white text-dark">$0.00</span>
+                    <span className="text-sm font-medium dark:text-white text-dark">
+                      ${balance.toFixed(2)}
+                    </span>
                   </div>
                 </div>
               </div>
