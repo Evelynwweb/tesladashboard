@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Mail, Lock, LogIn, Shield, Eye, EyeOff } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { Toaster } from 'react-hot-toast';
 import { useTheme } from '../context/ThemeContext';
 
 const Login = () => {
@@ -32,6 +32,7 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-light-100 dark:bg-dark transition-colors duration-200 flex flex-col lg:flex-row">
+        <Toaster position="top-right" />
       {/* Left illustration panel */}
       <div className="hidden lg:flex lg:w-1/2 bg-dot-pattern dark:bg-dark-50 bg-light-200 relative overflow-hidden items-center justify-center">
         <div className="absolute top-8 left-8">
