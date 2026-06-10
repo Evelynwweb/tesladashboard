@@ -1,20 +1,14 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Wallet, CircleCheckBig, ClockArrowDown, History } from 'lucide-react';
-
-const withdrawalsMethods = [
-  { id: 'zelle', name: 'Zelle', icon: '/images/zelle.png' },
-  { id: 'usdt_erc20', name: 'USDT (ERC20)', icon: '/images/usdt.png' },
-  { id: 'usdt_trc20', name: 'USDT (TRC20)', icon: '/images/usdt.png' },
-  { id: 'bank_transfer', name: 'Bank Transfer', icon: '/images/bank.png' },
-  { id: 'ethereum', name: 'Ethereum (ERC20)', icon: '/images/eth.png' },
-  { id: 'bitcoin', name: 'Bitcoin', icon: '/images/btc.png' },
-];
+import toast from 'react-hot-toast';
 
 const Withdrawals = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [withdrawalMethods, setWithdrawalMethods] = useState([]);
 
+  // Password confirmation check (keep as is)
   useEffect(() => {
     const isConfirmed = sessionStorage.getItem('withdraw_password_confirmed');
     if (!isConfirmed) {
@@ -22,13 +16,33 @@ const Withdrawals = () => {
     }
   }, [navigate]);
 
+  // Fetch withdrawal methods from backend
+  useEffect(() => {
+    const fetchMethods = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/user/withdrawal-methods`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setWithdrawalMethods(data);
+        } else {
+          toast.error('Failed to load withdrawal methods');
+        }
+      } catch (err) {
+        toast.error('Error loading methods');
+      }
+    };
+    fetchMethods();
+  }, []);
+
   const handleWithdraw = (method) => {
     navigate('/dashboard/withdraw-funds', { state: { method } });
   };
 
   return (
     <div className="p-4 md:p-6 pb-20 md:pb-8 overflow-x-hidden flex-grow">
-      {/* Page Header */}
+      {/* Page Header (same as before) */}
       <div className="relative mb-8">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-3xl -z-10 blur-xl opacity-50" />
         <div className="px-6 py-8 rounded-3xl bg-gradient-to-r from-primary/5 to-secondary/5 backdrop-blur-sm border border-white/10">
@@ -54,7 +68,7 @@ const Withdrawals = () => {
         </div>
       </div>
 
-      {/* Withdrawal Methods Table */}
+      {/* Withdrawal Methods Table - dynamic */}
       <div className="bg-white dark:bg-dark-50 rounded-xl shadow-sm border border-light-200 dark:border-dark-200/50 overflow-hidden">
         <div className="p-5 border-b border-light-200 dark:border-dark-200/50">
           <h2 className="text-base font-bold text-dark dark:text-white">Select Withdrawal Method</h2>
@@ -65,37 +79,42 @@ const Withdrawals = () => {
               <tr className="bg-light-50 dark:bg-dark-100 text-dark-300 dark:text-light-300 text-xs uppercase">
                 <th className="px-6 py-3 text-left font-medium">Method</th>
                 <th className="px-6 py-3 text-right font-medium">Action</th>
-              </tr>
+               </tr>
             </thead>
             <tbody className="divide-y divide-light-200 dark:divide-dark-200/50">
-              {withdrawalsMethods.map((method) => (
+              {withdrawalMethods.map((method) => (
                 <tr key={method.id} className="hover:bg-light-50 dark:hover:bg-dark-100/50 transition-colors text-sm">
                   <td className="px-6 py-4">
                     <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-lg bg-light-100 dark:bg-dark-200 p-1.5 mr-3 flex items-center justify-center">
-                        <img src={method.icon} alt={method.name} className="h-full w-full object-contain" />
-                      </div>
+                      {method.icon && (
+                        <div className="w-8 h-8 rounded-lg bg-light-100 dark:bg-dark-200 p-1.5 mr-3 flex items-center justify-center">
+                          <img src={method.icon} alt={method.name} className="h-full w-full object-contain" />
+                        </div>
+                      )}
                       <p className="font-medium dark:text-white text-dark">{method.name}</p>
                     </div>
-                  </td>
+                   </td>
                   <td className="px-6 py-4 text-right">
                     <button
-                       onClick={() => handleWithdraw(method)}  
+                      onClick={() => handleWithdraw(method)}
                       className="px-3 py-1.5 text-xs font-medium rounded-md bg-primary text-white hover:bg-primary-600 transition-colors"
                     >
                       Withdraw
                     </button>
-                  </td>
-                </tr>
+                   </td>
+                 </tr>
               ))}
             </tbody>
           </table>
+          {withdrawalMethods.length === 0 && (
+            <p className="text-center py-6 text-gray-500">No withdrawal methods available. Please contact support.</p>
+          )}
         </div>
       </div>
 
-      {/* Info Cards */}
+      {/* Info Cards - keep same as before */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-        {/* Withdrawal Process */}
+        {/* Withdrawal Process (unchanged) */}
         <div className="bg-white dark:bg-dark-50 rounded-xl shadow-sm border border-light-200 dark:border-dark-200/50 overflow-hidden">
           <div className="p-4 border-b border-light-200 dark:border-dark-200/50 flex items-center">
             <svg className="w-5 h-5 text-primary mr-2" viewBox="0 0 24 24" fill="none">

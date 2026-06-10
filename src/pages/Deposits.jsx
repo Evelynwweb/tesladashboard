@@ -5,18 +5,11 @@ import toast from 'react-hot-toast';
 import { Wallet, Shield, Clock, CheckCircle, CircleCheckBig, History } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const paymentMethods = [
-  { id: '22', name: 'USDT (ERC20)', icon: '/images/usdt.png' },
-  { id: '17', name: 'USDT (TRC20)', icon: '/images/usdt.png' },
-  { id: '2', name: 'Ethereum (ERC20)', icon: '/images/eth.png' },
-  { id: '1', name: 'Bitcoin', icon: '/images/btc.png' },
-];
-
 const Deposits = () => {
   const { register, handleSubmit, formState: { errors } } = useForm();
+  const [paymentMethods, setPaymentMethods] = useState([]);
   const [selectedMethod, setSelectedMethod] = useState(null);
-  const [methodName, setMethodName] = useState('');
-  const [methodIcon, setMethodIcon] = useState(null);
+  const [selectedMethodObj, setSelectedMethodObj] = useState(null);
   const [userBalance, setUserBalance] = useState(0);
   const [loadingBalance, setLoadingBalance] = useState(true);
 
@@ -27,8 +20,8 @@ const Deposits = () => {
     const fetchBalance = async () => {
       try {
         const res = await fetch(`${import.meta.env.VITE_API_URL}/dashboard`, {
-  headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-});
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
         const data = await res.json();
         if (res.ok) {
           setUserBalance(data.user.balance);
@@ -44,47 +37,54 @@ const Deposits = () => {
     fetchBalance();
   }, []);
 
-  const selectMethod = async (id) => {
-    try {
-      const res = await fetch(`http://localhost:5000/api/get-method/${id}`);
-      const methodName = await res.json();
-      setSelectedMethod(id);
-      setMethodName(methodName);
-      // Find icon (optional)
-      const method = paymentMethods.find(m => m.id === id);
-      if (method) setMethodIcon(method.icon);
-      toast.success(`You have chosen to pay with ${methodName}`);
-    } catch (err) {
-      toast.error('Failed to fetch payment method');
-    }
+  // Fetch deposit methods from the new user endpoint
+  useEffect(() => {
+    const fetchMethods = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/user/deposit-methods`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPaymentMethods(data);
+        } else {
+          toast.error('Failed to load deposit methods');
+        }
+      } catch (err) {
+        toast.error('Error loading methods');
+      }
+    };
+    fetchMethods();
+  }, []);
+
+  const selectMethod = (method) => {
+    setSelectedMethod(method.id);
+    setSelectedMethodObj(method);
+    toast.success(`You have chosen to pay with ${method.name}`);
   };
 
   const resetMethod = () => {
     setSelectedMethod(null);
-    setMethodName('');
-    setMethodIcon(null);
+    setSelectedMethodObj(null);
   };
 
-  
-const onSubmit = async (data) => {
-  if (!selectedMethod) {
-    toast.error('Please choose a payment method');
-    return;
-  }
-  // Navigate to payment details page with method and amount
-  navigate('/dashboard/deposit-payment', {
-    state: {
-      methodId: selectedMethod,
-      methodName: methodName,
-      amount: data.amount,
-      methodIcon: methodIcon,
+  const onSubmit = async (data) => {
+    if (!selectedMethod) {
+      toast.error('Please choose a payment method');
+      return;
     }
-  });
-};
+    // Navigate to payment details page with method and amount
+    navigate('/dashboard/deposit-payment', {
+      state: {
+        method: selectedMethodObj,   // contains id, name, icon, address, network
+        amount: data.amount,
+      }
+    });
+  };
 
   return (
     <div className="p-4 md:p-6 pb-20 md:pb-8 overflow-x-hidden flex-grow">
-      {/* Page Header */}
+      {/* Page Header - unchanged */}
       <div className="relative mb-8">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-3xl -z-10 blur-xl opacity-50" />
         <div className="px-6 py-8 rounded-3xl bg-gradient-to-r from-primary/5 to-secondary/5 backdrop-blur-sm border border-white/10">
@@ -143,9 +143,7 @@ const onSubmit = async (data) => {
             {errors.amount && <p className="text-sm text-danger">{errors.amount.message}</p>}
           </div>
 
-          <input type="hidden" name="payment_method" value={selectedMethod || ''} />
-
-          {/* Payment Methods Table */}
+          {/* Payment Methods Table - dynamic */}
           <div className="bg-white dark:bg-dark-50 rounded-xl shadow-sm border border-light-200 dark:border-dark-200/50 overflow-hidden">
             <div className="p-5 border-b border-light-200 dark:border-dark-200/50">
               <h2 className="text-base font-bold dark:text-white text-dark">Select Deposit Method</h2>
@@ -163,16 +161,18 @@ const onSubmit = async (data) => {
                     <tr key={method.id} className="hover:bg-light-50 dark:hover:bg-dark-100/50 transition-colors text-sm">
                       <td className="px-6 py-4">
                         <div className="flex items-center">
-                          <div className="w-8 h-8 rounded-lg bg-light-100 dark:bg-dark-200 p-1.5 mr-3 flex items-center justify-center">
-                            <img src={method.icon} alt={method.name} className="h-full w-full object-contain" />
-                          </div>
+                          {method.icon && (
+                            <div className="w-8 h-8 rounded-lg bg-light-100 dark:bg-dark-200 p-1.5 mr-3 flex items-center justify-center">
+                              <img src={method.icon} alt={method.name} className="h-full w-full object-contain" />
+                            </div>
+                          )}
                           <p className="font-medium dark:text-white text-dark">{method.name}</p>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <button
                           type="button"
-                          onClick={() => selectMethod(method.id)}
+                          onClick={() => selectMethod(method)}
                           className="px-3 py-1.5 text-xs font-medium rounded-md bg-primary text-white hover:bg-primary-600 transition-colors"
                         >
                           Select
@@ -182,18 +182,21 @@ const onSubmit = async (data) => {
                   ))}
                 </tbody>
               </table>
+              {paymentMethods.length === 0 && (
+                <p className="text-center py-6 text-gray-500">No deposit methods available. Please contact support.</p>
+              )}
             </div>
           </div>
 
-          {selectedMethod && (
+          {selectedMethodObj && (
             <div className="p-4 rounded-xl bg-light-50 dark:bg-dark-100 border border-light-200 dark:border-dark-200 flex items-center justify-between">
               <div className="flex items-center">
                 <div className="w-10 h-10 rounded-lg bg-primary-50 dark:bg-primary-900/30 p-2 mr-3 flex items-center justify-center">
-                  {methodIcon && <img src={methodIcon} alt="" className="h-full w-full object-contain" />}
+                  {selectedMethodObj.icon && <img src={selectedMethodObj.icon} alt="" className="h-full w-full object-contain" />}
                 </div>
                 <div>
                   <p className="text-sm text-dark-300 dark:text-light-300">Selected Method</p>
-                  <p className="text-base font-medium dark:text-white text-dark">{methodName}</p>
+                  <p className="text-base font-medium dark:text-white text-dark">{selectedMethodObj.name}</p>
                 </div>
               </div>
               <button type="button" onClick={resetMethod} className="text-xs text-primary dark:text-primary-400 hover:underline">
@@ -222,7 +225,7 @@ const onSubmit = async (data) => {
         </form>
       </div>
 
-      {/* Info Cards (unchanged) */}
+      {/* Info Cards (same as before, keep them) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
         {/* Deposit Process */}
         <div className="bg-white dark:bg-dark-50 rounded-xl shadow-sm border border-light-200 dark:border-dark-200/50 overflow-hidden">

@@ -21,6 +21,7 @@ import Register from './pages/Register';
 import Login from './pages/Login';
 import WithdrawFunds from './pages/WithdrawFunds';
 import DepositPayment from './pages/DepositPayment';
+import BuyTesla from './pages/BuyTesla';
 
 function App() {
   return (
@@ -45,6 +46,7 @@ function App() {
             <Route path="dashboard/accounthistory" element={<PrivateRoute><TransactionHistory /></PrivateRoute>} />
             <Route path="dashboard/withdraw-funds" element={<PrivateRoute><WithdrawFunds /></PrivateRoute>} />
             <Route path="dashboard/deposit-payment" element={<PrivateRoute><DepositPayment /></PrivateRoute>} />
+            <Route path="dashboard/buy-tesla" element={<PrivateRoute><BuyTesla /></PrivateRoute>} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
 

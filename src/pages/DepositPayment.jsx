@@ -1,34 +1,24 @@
-// pages/DepositPayment.jsx
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Wallet, Copy, CheckCircle, Upload, AlertCircle, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-// You should fetch real wallet addresses from your backend based on methodId
-// For demo, we use a mapping (replace with actual API call)
-const methodWalletMap = {
-  '22': { address: '0xcd68e1adf3725725d4e8b6018a0cd325c49188a2', network: 'ERC20' },
-  '17': { address: 'TXhhjkhjkdhjkdhjkhjkdhjkdhjkdhjkd', network: 'TRC20' },
-  '2': { address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0b', network: 'ERC20' },
-  '1': { address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa', network: 'Bitcoin' },
-};
-
 const DepositPayment = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { methodId, methodName, amount, methodIcon } = location.state || {};
+  const { method, amount } = location.state || {};
   const [proofFile, setProofFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (!methodId || !amount) {
+    if (!method || !amount) {
       toast.error('Invalid payment request');
       navigate('/dashboard/deposits');
     }
-  }, [methodId, amount, navigate]);
+  }, [method, amount, navigate]);
 
-  const walletInfo = methodWalletMap[methodId] || { address: 'Please contact support', network: 'N/A' };
+  if (!method) return null;
 
   const copyToClipboard = async (text) => {
     try {
@@ -57,44 +47,46 @@ const DepositPayment = () => {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (!proofFile) {
-    toast.error('Please upload payment proof');
-    return;
-  }
-
-  setSubmitting(true);
-
-  try {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/deposits`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-      body: JSON.stringify({
-        amount: amount,
-        payment_method: methodId,   // e.g. '22', '17', etc.
-      }),
-    });
-
-    const data = await res.json();
-    if (res.ok) {
-      toast.success('Deposit request submitted!');
-      navigate('/dashboard/accounthistory');
-    } else {
-      toast.error(data.message || 'Submission failed');
+    e.preventDefault();
+    if (!proofFile) {
+      toast.error('Please upload payment proof');
+      return;
     }
-  } catch (err) {
-    toast.error('Network error');
-  } finally {
-    setSubmitting(false);
-  }
-};
+
+    setSubmitting(true);
+
+    // Create FormData to upload file
+    const formData = new FormData();
+    formData.append('amount', amount);
+    formData.append('payment_method', method.id);
+    formData.append('proof', proofFile);
+
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/deposits`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: formData,  // note: do not set Content-Type, browser will set it with boundary
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('Deposit request submitted!');
+        navigate('/dashboard/accounthistory');
+      } else {
+        toast.error(data.message || 'Submission failed');
+      }
+    } catch (err) {
+      toast.error('Network error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="p-4 md:p-6 pb-20 md:pb-8 overflow-x-hidden flex-grow">
-      {/* Header similar to Deposits page */}
+      {/* Header */}
       <div className="relative mb-8">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-3xl -z-10 blur-xl opacity-50" />
         <div className="px-6 py-8 rounded-3xl bg-gradient-to-r from-primary/5 to-secondary/5 backdrop-blur-sm border border-white/10">
@@ -102,7 +94,7 @@ const DepositPayment = () => {
             <div>
               <h1 className="text-3xl font-bold dark:text-white text-dark">Complete Payment</h1>
               <p className="mt-2 text-base dark:text-gray-300 text-gray-600">
-                Send exactly <span className="font-semibold">${amount}</span> using {methodName}
+                Send exactly <span className="font-semibold">${amount}</span> using {method.name}
               </p>
             </div>
             <button
@@ -122,11 +114,11 @@ const DepositPayment = () => {
           <div className="p-6 border-b border-light-200 dark:border-dark-200/50">
             <div className="flex items-center gap-3">
               <div className="flex-shrink-0 w-10 h-10 rounded-full bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center">
-                {methodIcon && <img src={methodIcon} className="w-6 h-6 object-contain" alt="" />}
+                {method.icon && <img src={method.icon} className="w-6 h-6 object-contain" alt="" />}
               </div>
               <div>
                 <p className="text-sm text-dark-300 dark:text-light-300">Selected payment method</p>
-                <p className="text-lg font-semibold text-dark dark:text-white">{methodName}</p>
+                <p className="text-lg font-semibold text-dark dark:text-white">{method.name}</p>
               </div>
             </div>
           </div>
@@ -135,12 +127,12 @@ const DepositPayment = () => {
             <div className="mb-8">
               <div className="mb-4 text-center p-4 rounded-xl bg-gradient-to-r from-primary-50 to-secondary-50 dark:from-dark-100 dark:to-dark-200">
                 <p className="text-dark dark:text-white">
-                  You are to make a payment of <span className="font-bold">${amount}</span> using {methodName}.
+                  You are to make a payment of <span className="font-bold">${amount}</span> using {method.name}.
                 </p>
               </div>
               <div className="my-6 flex justify-center">
                 <div className="p-4 rounded-xl bg-white dark:bg-dark-100 shadow-md inline-block">
-                  <img src={methodIcon || '/images/usdt.png'} alt={methodName} className="h-16 object-contain" />
+                  {method.icon && <img src={method.icon} alt={method.name} className="h-16 object-contain" />}
                 </div>
               </div>
             </div>
@@ -148,25 +140,27 @@ const DepositPayment = () => {
             <div className="space-y-6">
               <div className="space-y-2 mb-6">
                 <h3 className="text-lg font-semibold text-dark dark:text-white">
-                  {methodName} Address:
+                  {method.name} Address:
                 </h3>
                 <div className="relative">
                   <input
                     type="text"
                     readOnly
-                    value={walletInfo.address}
+                    value={method.address}
                     className="w-full py-3 pl-4 pr-12 rounded-xl bg-light-100 dark:bg-dark-100 border border-light-200 dark:border-dark-200 text-dark dark:text-white focus:ring-2 focus:ring-primary font-mono text-sm"
                   />
                   <button
-                    onClick={() => copyToClipboard(walletInfo.address)}
+                    onClick={() => copyToClipboard(method.address)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-primary/10 dark:bg-primary/20 text-primary hover:bg-primary/20 transition-all"
                   >
                     {copied ? <CheckCircle className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                   </button>
                 </div>
-                <p className="text-sm text-dark-300 dark:text-light-300">
-                  <span className="font-semibold">Network:</span> {walletInfo.network}
-                </p>
+                {method.network && (
+                  <p className="text-sm text-dark-300 dark:text-light-300">
+                    <span className="font-semibold">Network:</span> {method.network}
+                  </p>
+                )}
               </div>
             </div>
 

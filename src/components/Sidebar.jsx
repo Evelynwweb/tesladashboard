@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Download, History, Upload, Link, Briefcase, Blocks, CopySlash, Bot, Folder, TrendingUp, Users, Settings, Wallet, Shield } from 'lucide-react';
+import { Home, Download, History, Car, Upload, Link, Briefcase, Blocks, CopySlash, Bot, Folder, TrendingUp, Users, Settings, Wallet, Shield } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -32,6 +32,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { to: '/dashboard/accounthistory', icon: History, label: 'Transactions' },
     { to: '/dashboard/withdrawals', icon: Upload, label: 'Withdraw' },
     { to: '/connect-wallet', icon: Link, label: 'Connect Wallet' },
+    { to: '/dashboard/buy-tesla', icon: Car, label: 'Buy Tesla' },
   ];
 
   const navInvest = [
