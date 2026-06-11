@@ -29,7 +29,6 @@ const Login = () => {
   }
 };
 
-
   return (
     <div className="min-h-screen bg-light-100 dark:bg-dark transition-colors duration-200 flex flex-col lg:flex-row">
         <Toaster position="top-right" />
@@ -149,7 +148,8 @@ const Login = () => {
               <div className="mt-8 text-center">
                 <p className="text-sm dark:text-gray-400 text-gray-600">
                   Don't have an account?{' '}
-                  <a href="/verify" className="font-medium text-primary hover:text-primary-600 transition-colors">
+                  {/* CHANGED: /verify → /register */}
+                  <a href="/register" className="font-medium text-primary hover:text-primary-600 transition-colors">
                     Sign up now
                   </a>
                 </p>
