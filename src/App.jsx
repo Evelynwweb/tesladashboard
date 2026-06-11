@@ -16,7 +16,7 @@ import MyInvestments from './pages/MyInvestments';
 import TradingHistory from './pages/TradingHistory';
 import Referrals from './pages/Referrals';
 import AccountSettings from './pages/AccountSettings';
-import PreRegisterVerification from './pages/PreRegisterVerification';
+// PreRegisterVerification import removed
 import Register from './pages/Register';
 import Login from './pages/Login';
 import WithdrawFunds from './pages/WithdrawFunds';
@@ -50,8 +50,7 @@ function App() {
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
 
-          {/* Public authentication routes */}
-          <Route path="/verify" element={<PreRegisterVerification />} />
+          {/* Public authentication routes – now only register and login */}
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
         </Routes>
