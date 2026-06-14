@@ -67,11 +67,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="flex h-16 items-center mt-4 border-b border-light-200 dark:border-dark-100 px-6">
-            <img
-              src="/logo.png"
-              alt="Logo"
-              className="h-8 dark:brightness-0 dark:invert"
-            />
+            <img src="/tesla.png" alt="Tesla Logo" className="h-8 dark:brightness-0 dark:invert" />
             <button className="ml-auto md:hidden" onClick={onClose}>
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

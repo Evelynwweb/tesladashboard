@@ -26,7 +26,7 @@ const TopBar = ({ onMenuClick }) => {
           <Menu className="h-5 w-5 dark:text-white text-dark" />
         </button>
         <div className="md:hidden">
-          <img src="/logo.png" alt="Logo" className="h-8 dark:brightness-0 dark:invert" />
+          <img src="/tesla.png" alt="Tesla Logo" className="h-8 dark:brightness-0 dark:invert" />
         </div>
       </div>
 
