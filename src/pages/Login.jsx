@@ -35,7 +35,8 @@ const Login = () => {
       {/* Left illustration panel */}
       <div className="hidden lg:flex lg:w-1/2 bg-dot-pattern dark:bg-dark-50 bg-light-200 relative overflow-hidden items-center justify-center">
         <div className="absolute top-8 left-8">
-          <img src="/logo.png" alt="Logo" className="dark:brightness-0 dark:invert w-32" />
+          {/* ✅ CORRECTED LOGO: now points to tesla.png in public folder */}
+          <img src="/tesla.png" alt="Logo" className="dark:brightness-0 dark:invert w-32" />
         </div>
         <div className="text-center max-w-md">
           <h1 className="text-3xl font-bold dark:text-white text-dark mb-4">Welcome to Tesla Stock SpaceX</h1>
@@ -157,7 +158,6 @@ const Login = () => {
               <div className="mt-8 text-center">
                 <p className="text-sm dark:text-gray-400 text-gray-600">
                   Don't have an account?{' '}
-                  {/* CHANGED: /verify → /register */}
                   <a href="/register" className="font-medium text-primary hover:text-primary-600 transition-colors">
                     Sign up now
                   </a>

@@ -10,7 +10,6 @@ const countries = [
   { code: 'CA', name: 'Canada' },
   { code: 'AU', name: 'Australia' },
   { code: 'NG', name: 'Nigeria' },
-  // Add all countries from the original list...
 ];
 
 const Register = () => {
@@ -41,14 +40,13 @@ const onSubmit = async (data) => {
   }
 };
 
-  
-
   return (
     <div className="min-h-screen bg-light-100 dark:bg-dark transition-colors duration-200 flex flex-col lg:flex-row">
       {/* Left illustration panel (hidden on mobile) */}
       <div className="hidden lg:flex lg:w-1/2 bg-dot-pattern dark:bg-dark-50 bg-light-200 relative overflow-hidden items-center justify-center">
         <div className="absolute top-8 left-8">
-          <img src="/logo.png" alt="Logo" className="dark:brightness-0 dark:invert w-32" />
+          {/* ✅ CORRECTED LOGO: now points to tesla.png in public folder */}
+          <img src="/tesla.png" alt="Logo" className="dark:brightness-0 dark:invert w-32" />
         </div>
         <div className="text-center max-w-md">
           <h1 className="text-3xl font-bold dark:text-white text-dark mb-4">Invest with Confidence</h1>
@@ -303,7 +301,6 @@ const onSubmit = async (data) => {
         </div>
       </div>
 
-      {/* Dot pattern background for left panel – add this to global CSS or use inline */}
       <style>{`
         .bg-dot-pattern {
           background-image: radial-gradient(circle, rgba(0,0,0,0.1) 1px, transparent 1px);
