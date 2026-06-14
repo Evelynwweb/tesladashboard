@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Mail, Lock, LogIn, Shield, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, Loader2, LogIn, Shield, Eye, EyeOff } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { useTheme } from '../context/ThemeContext';
 
@@ -134,14 +134,23 @@ const Login = () => {
                 </div>
 
                 <div>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full flex justify-center items-center px-4 py-3 border border-transparent rounded-lg shadow-md text-white bg-primary hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
-                  >
-                    <LogIn className="h-5 w-5 mr-2" />
-                    <span className="font-medium">Sign In</span>
-                  </button>
+                 <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full flex justify-center items-center px-4 py-3 border border-transparent rounded-lg shadow-md text-white bg-primary hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      <span className="font-medium">Signing in...</span>
+                    </>
+                  ) : (
+                    <>
+                      <LogIn className="h-5 w-5 mr-2" />
+                      <span className="font-medium">Sign In</span>
+                    </>
+                  )}
+                </button>
                 </div>
               </form>
 
