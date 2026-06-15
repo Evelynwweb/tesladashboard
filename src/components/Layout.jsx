@@ -1,9 +1,11 @@
+// src/components/Layout.jsx
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import MobileNav from './MobileNav';
 import { Toaster } from 'react-hot-toast';
+import SmartsuppChat from './SmartsuppChat';  // ← ADD THIS
 
 const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -19,6 +21,7 @@ const Layout = () => {
         <MobileNav />
       </div>
       <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+      <SmartsuppChat />  {/* ← ADD THIS LINE */}
     </div>
   );
 };
