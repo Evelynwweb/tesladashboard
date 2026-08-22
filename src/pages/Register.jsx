@@ -44,10 +44,9 @@ const onSubmit = async (data) => {
     toast.success('Registration successful!');
     window.location.href = '/dashboard';
   } catch (err) {
+    // Deliberately no redirect to /verify-email here: bouncing people out of a
+    // filled-in form on a server-side error is what made signup feel like a loop.
     toast.error(err.message);
-    if (/not verified/i.test(err.message)) {
-      window.location.href = '/verify-email';
-    }
   }
 };
 
