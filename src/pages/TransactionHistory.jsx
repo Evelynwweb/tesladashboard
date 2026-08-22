@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Download, Upload, Repeat, Inbox, Wallet } from 'lucide-react';
 import toast from 'react-hot-toast';
+import api from '../api';
 
 const TransactionHistory = () => {
   const [activeTab, setActiveTab] = useState('deposit');
@@ -21,46 +22,22 @@ const TransactionHistory = () => {
   // Fetch all data
   useEffect(() => {
     const fetchTransactions = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        toast.error('Please login again');
-        return;
-      }
-
+      // These four calls used to hardcode http://localhost:5000, so this page
+      // was dead in any deployed environment.
       try {
-        // Fetch balance (from dashboard endpoint)
-        const balanceRes = await fetch('http://localhost:5000/api/dashboard', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const balanceData = await balanceRes.json();
-        if (balanceRes.ok) {
-          setCurrentBalance(balanceData.user.balance);
-        }
+        const [dashboard, depositsData, withdrawalsData, othersData] = await Promise.all([
+          api.get('/dashboard'),
+          api.get('/transactions/deposits'),
+          api.get('/transactions/withdrawals'),
+          api.get('/transactions/others'),
+        ]);
 
-        // Fetch deposits
-        const depositsRes = await fetch('http://localhost:5000/api/transactions/deposits', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const depositsData = await depositsRes.json();
-        if (depositsRes.ok) setDeposits(depositsData);
-
-        // Fetch withdrawals
-        const withdrawalsRes = await fetch('http://localhost:5000/api/transactions/withdrawals', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const withdrawalsData = await withdrawalsRes.json();
-        if (withdrawalsRes.ok) setWithdrawals(withdrawalsData);
-
-        // Fetch others (bonus, referrals, etc.)
-        const othersRes = await fetch('http://localhost:5000/api/transactions/others', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const othersData = await othersRes.json();
-        if (othersRes.ok) setOthers(othersData);
-
+        setCurrentBalance(dashboard.user.balance);
+        setDeposits(depositsData);
+        setWithdrawals(withdrawalsData);
+        setOthers(othersData);
       } catch (err) {
-        console.error(err);
-        toast.error('Failed to load transaction history');
+        toast.error(err.message || 'Failed to load transaction history');
       } finally {
         setLoading(false);
       }

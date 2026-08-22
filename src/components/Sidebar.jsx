@@ -1,30 +1,16 @@
-import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Home, Download, History, Car, Upload, Link, Briefcase, Blocks, CopySlash, Bot, Folder, TrendingUp, Users, Settings, Wallet, Shield } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useUser, initialsOf } from '../context/UserContext';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { dark } = useTheme();
-  const [balance, setBalance] = useState(0);
+  // Name and balance came from a hardcoded template value plus a duplicate
+  // /dashboard request; both now come from the shared user context.
+  const { user } = useUser();
+  const balance = user?.balance ?? 0;
 
-   useEffect(() => {
-    const fetchBalance = async () => {
-      try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/dashboard`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
-        const data = await res.json();
-        if (res.ok) {
-          setBalance(data.user.balance);
-        }
-      } catch (err) {
-        console.error('Sidebar balance fetch failed', err);
-      }
-    };
-    fetchBalance();
-  }, []);
+
 
   const navItemsMain = [
     { to: '/dashboard', icon: Home, label: 'Dashboard' },
@@ -83,11 +69,11 @@ const Sidebar = ({ isOpen, onClose }) => {
                 <div className="relative mb-3">
                   <div className="absolute inset-0 bg-gradient-to-r from-primary to-secondary rounded-full blur-[1px]" />
                   <div className="relative bg-primary h-16 w-16 rounded-full flex items-center justify-center text-xl font-bold border-2 border-light-300/80 dark:border-dark/80">
-                    Lo
+                    {initialsOf(user)}
                   </div>
                   <div className="absolute bottom-0 right-0 h-4 w-4 bg-secondary rounded-full border-2 border-light-300 dark:border-dark" />
                 </div>
-                <h5 className="font-medium dark:text-white text-dark mb-0.5">Low Income</h5>
+                <h5 className="font-medium dark:text-white text-dark mb-0.5">{user?.name || user?.username || ''}</h5>
                 <span className="text-xs text-gray-600 dark:text-gray-400 mb-3 bg-light-200/50 dark:bg-dark-50/50 px-2 py-0.5 rounded-full">online</span>
                 <div className="bg-gradient-to-r from-light-100 to-light-200 dark:from-dark-50 dark:to-dark-100 p-3 rounded-lg w-full flex items-center gap-2 border border-light-200/60 dark:border-dark-100/60 relative overflow-hidden">
                   <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">

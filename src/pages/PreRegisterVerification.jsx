@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Shield, Key, CheckCircle, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
+import api from '../api';
 import { useTheme } from '../context/ThemeContext';
 
 const PreRegisterVerification = () => {
@@ -9,8 +10,14 @@ const PreRegisterVerification = () => {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm();
   const [email, setEmail] = useState('');
   const [codeSent, setCodeSent] = useState(false);
-  const [generatedCode, setGeneratedCode] = useState('');
   const [loadingCode, setLoadingCode] = useState(false);
+
+  // Referral links land here as /verify-email?ref=<username>; hold onto the
+  // code so it survives the hop to the registration form.
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get('ref');
+    if (ref) localStorage.setItem('referralCode', ref);
+  }, []);
 
   const requestCode = async (e) => {
     e.preventDefault();
@@ -20,14 +27,10 @@ const PreRegisterVerification = () => {
     }
     setLoadingCode(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/verify-code`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-      setGeneratedCode(data.devCode);
+      // This posted { email } to /verify-code, which requires a code as well
+      // and always answered "Email and code required" — so a code could never
+      // be requested at all. /pre-register is the endpoint that sends it.
+      await api.post('/pre-register', { email }, { auth: false });
       setCodeSent(true);
       toast.success('Verification code sent to your email');
     } catch (err) {
@@ -43,14 +46,9 @@ const PreRegisterVerification = () => {
       return;
     }
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/verify-code`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code: data.code })
-      });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.message);
+      const result = await api.post('/verify-code', { email, code: data.code }, { auth: false });
       localStorage.setItem('tempToken', result.tempToken);
+      localStorage.setItem('verifiedEmail', email);
       toast.success('Code verified! Redirecting to registration...');
       window.location.href = '/register';
     } catch (err) {
@@ -112,18 +110,14 @@ const PreRegisterVerification = () => {
               </form>
             ) : (
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium dark:text-gray-300 text-gray-700 mb-2">
-                    Verification Code
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={generatedCode}
-                      disabled
-                      className="block w-full py-3 px-4 text-center font-bold text-lg dark:bg-primary/10 bg-primary/5 border-0 dark:text-primary text-primary rounded-lg shadow-sm"
-                    />
-                  </div>
+                {/* This used to display the code the API handed back, which
+                    defeated the point of emailing one. */}
+                <div className="flex items-start gap-2 py-3 px-4 rounded-lg dark:bg-primary/10 bg-primary/5">
+                  <Mail className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                  <p className="text-sm dark:text-gray-300 text-gray-700">
+                    We sent a 6-digit code to <span className="font-medium text-primary">{email}</span>.
+                    It expires in 10 minutes.
+                  </p>
                 </div>
                 <div>
                   <label htmlFor="code" className="block text-sm font-medium dark:text-gray-300 text-gray-700 mb-2">
@@ -138,7 +132,7 @@ const PreRegisterVerification = () => {
                       type="number"
                       {...register('code', { required: 'Verification code is required' })}
                       className="block w-full pl-10 pr-3 py-3 dark:bg-dark-100 bg-light-50 border dark:border-dark-200 border-light-300 rounded-lg shadow-sm dark:text-white text-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
-                      placeholder="Enter the code shown above"
+                      placeholder="Enter the 6-digit code"
                     />
                   </div>
                   {errors.code && <p className="mt-1 text-sm text-red-500">{errors.code.message}</p>}

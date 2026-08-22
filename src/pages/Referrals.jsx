@@ -1,21 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Share2, Copy, User, Link, UserPlus, Gift, BarChart2, Users, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
+import api from '../api';
+import { useUser } from '../context/UserContext';
 
 const Referrals = () => {
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
-  
-  // Demo data – replace with actual API data
+  const { user } = useUser();
+  const [stats, setStats] = useState({ totalReferrals: 0, referralEarnings: 0 });
+
+  useEffect(() => {
+    api.get('/dashboard')
+      .then((data) => setStats(data.stats))
+      .catch((err) => toast.error(err.message));
+  }, []);
+
+  // Every one of these was hardcoded to the same stranger's email, so all
+  // users were sharing one referral link and no signup could be attributed.
+  // The backend matches referrals on username, so that is the referral code.
   const referralStats = {
-    totalReferrals: 0,
-    totalEarnings: 0,
-    referralLink: 'https://account.teslastockspacex.com/ref/Lowincomehomes47@gmail.com',
-    referralId: 'Lowincomehomes47@gmail.com',
-    sponsor: null, // No sponsor for this demo
+    totalReferrals: stats.totalReferrals,
+    totalEarnings: stats.referralEarnings,
+    referralLink: user ? `${window.location.origin}/verify-email?ref=${encodeURIComponent(user.username)}` : '',
+    referralId: user?.username || '',
+    sponsor: user?.ref_by || null,
   };
-  
-  const referralsList = []; // Empty array for now – fill with API data
+
+  const referralsList = []; // Per-referral listing is not exposed by the API yet
   
   const copyToClipboard = async (text, type) => {
     try {

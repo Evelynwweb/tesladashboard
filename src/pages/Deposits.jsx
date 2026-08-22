@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
+import api from '../api';
 import { Wallet, Shield, Clock, CheckCircle, CircleCheckBig, History } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -12,6 +13,7 @@ const Deposits = () => {
   const [selectedMethodObj, setSelectedMethodObj] = useState(null);
   const [userBalance, setUserBalance] = useState(0);
   const [loadingBalance, setLoadingBalance] = useState(true);
+  const [loadingMethods, setLoadingMethods] = useState(true);
 
   const navigate = useNavigate();
 
@@ -37,24 +39,13 @@ const Deposits = () => {
     fetchBalance();
   }, []);
 
-  // Fetch deposit methods from the new user endpoint
+  // Fetch deposit methods. An empty list is a valid answer: it means no
+  // method has been configured with a wallet address in the admin panel.
   useEffect(() => {
-    const fetchMethods = async () => {
-      try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/user/deposit-methods`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setPaymentMethods(data);
-        } else {
-          toast.error('Failed to load deposit methods');
-        }
-      } catch (err) {
-        toast.error('Error loading methods');
-      }
-    };
-    fetchMethods();
+    api.get('/user/deposit-methods')
+      .then(setPaymentMethods)
+      .catch((err) => toast.error(err.message))
+      .finally(() => setLoadingMethods(false));
   }, []);
 
   const selectMethod = (method) => {
@@ -182,8 +173,17 @@ const Deposits = () => {
                   ))}
                 </tbody>
               </table>
-              {paymentMethods.length === 0 && (
-                <p className="text-center py-6 text-gray-500">No deposit methods available. Please contact support.</p>
+              {loadingMethods ? (
+                <p className="text-center py-6 text-gray-500">Loading deposit methods...</p>
+              ) : paymentMethods.length === 0 && (
+                // Empty means no admin has configured a deposit method with a
+                // wallet address yet, not that the page is broken.
+                <div className="text-center py-8 px-4">
+                  <p className="font-medium dark:text-white text-dark">Deposits are temporarily unavailable</p>
+                  <p className="mt-1 text-sm text-gray-500">
+                    No payment methods are set up right now. Please contact support and we will get you funded.
+                  </p>
+                </div>
               )}
             </div>
           </div>

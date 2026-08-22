@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
+import { UserProvider } from './context/UserContext';
 import Layout from './components/Layout';
 import PrivateRoute from './components/PrivateRoute';
 
@@ -16,7 +17,8 @@ import MyInvestments from './pages/MyInvestments';
 import TradingHistory from './pages/TradingHistory';
 import Referrals from './pages/Referrals';
 import AccountSettings from './pages/AccountSettings';
-// PreRegisterVerification import removed
+import PreRegisterVerification from './pages/PreRegisterVerification';
+import Impersonate from './pages/Impersonate';
 import Register from './pages/Register';
 import Login from './pages/Login';
 import WithdrawFunds from './pages/WithdrawFunds';
@@ -26,6 +28,7 @@ import BuyTesla from './pages/BuyTesla';
 function App() {
   return (
     <ThemeProvider>
+      <UserProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Layout />}>
@@ -50,11 +53,15 @@ function App() {
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
 
-          {/* Public authentication routes – now only register and login */}
+          {/* Public authentication routes */}
+          <Route path="/verify-email" element={<PreRegisterVerification />} />
+          {/* Landing point for the admin panel's "Log in as" support tool */}
+          <Route path="/impersonate" element={<Impersonate />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
         </Routes>
       </BrowserRouter>
+      </UserProvider>
     </ThemeProvider>
   );
 }

@@ -1,30 +1,38 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Shield, Lock, Eye, EyeOff, ShieldCheck, Info } from 'lucide-react';
 import toast from 'react-hot-toast';
+import api from '../api';
 
 const ConfirmPassword = () => {
   const navigate = useNavigate();
+  // `location.state` previously read window.location, which has no `state`.
+  const routerLocation = useLocation();
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (!password.trim()) {
-    toast.error('Please enter your password');
-    return;
-  }
+    e.preventDefault();
+    if (!password.trim()) {
+      toast.error('Please enter your password');
+      return;
+    }
 
-  setIsLoading(true);
-  setTimeout(() => {
-    setIsLoading(false);
-    toast.success('Identity confirmed. Redirecting...');
-    sessionStorage.setItem('withdraw_password_confirmed', 'true');
-    const from = location.state?.from || '/dashboard/withdrawals';
-    navigate(from);
-  }, 800);
-};
+    setIsLoading(true);
+    // Previously a setTimeout that confirmed the password without checking it,
+    // so any input unlocked the withdrawal flow.
+    try {
+      await api.post('/withdrawals/confirm-password', { password });
+      toast.success('Identity confirmed. Redirecting...');
+      sessionStorage.setItem('withdraw_password_confirmed', 'true');
+      navigate(routerLocation.state?.from || '/dashboard/withdrawals');
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">

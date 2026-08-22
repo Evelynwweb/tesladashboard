@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Wallet } from 'lucide-react';
 import toast from 'react-hot-toast';
+import api from '../api';
 
 // Data for the trading bots, extracted from the HTML
 const tradingBots = [
@@ -46,11 +47,21 @@ const TradingBots = () => {
     e.preventDefault();
     setLoading((prev) => ({ ...prev, [bot.id]: true }));
 
-    // Simulate API call – replace with actual POST to /dashboard/buybot
-    setTimeout(() => {
+    // This was a setTimeout stub: it reported success without ever debiting the
+    // balance or recording the purchase.
+    try {
+      await api.post('/bots/purchase', {
+        botId: bot.id,
+        botName: bot.name,
+        amount: bot.amount,
+        duration: bot.duration,
+      });
       toast.success(`Successfully purchased ${bot.name}!`);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
       setLoading((prev) => ({ ...prev, [bot.id]: false }));
-    }, 1000);
+    }
   };
 
   return (

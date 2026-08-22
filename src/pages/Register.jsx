@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { User, UserCheck, Mail, Phone, Lock, MapPin, Users, UserPlus, Shield, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
+import api from '../api';
 import { useTheme } from '../context/ThemeContext';
 
 const countries = [
@@ -16,27 +17,37 @@ const Register = () => {
   const { dark, toggleDark } = useTheme();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm();
+  const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm();
 
   const password = watch('password');
 
+  // Prefill the referral field so a shared link actually attributes the signup.
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get('ref')
+      || localStorage.getItem('referralCode');
+    if (ref) setValue('ref_by', ref);
+  }, [setValue]);
+
 const onSubmit = async (data) => {
   try {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    const result = await res.json();
-    if (res.ok) {
-      localStorage.setItem('token', result.token);
-      toast.success('Registration successful!');
-      window.location.href = '/dashboard';
-    } else {
-      toast.error(result.message);
-    }
+    // The signup token issued by /verify-code is now actually checked by the
+    // API, so it has to travel with the registration.
+    const result = await api.post(
+      '/register',
+      { ...data, tempToken: localStorage.getItem('tempToken') },
+      { auth: false }
+    );
+    localStorage.removeItem('tempToken');
+    localStorage.removeItem('verifiedEmail');
+    localStorage.removeItem('referralCode');
+    localStorage.setItem('token', result.token);
+    toast.success('Registration successful!');
+    window.location.href = '/dashboard';
   } catch (err) {
     toast.error(err.message);
+    if (/not verified/i.test(err.message)) {
+      window.location.href = '/verify-email';
+    }
   }
 };
 

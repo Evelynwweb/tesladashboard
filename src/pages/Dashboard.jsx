@@ -108,12 +108,9 @@ const Dashboard = () => {
           setRecentTransactions(data.recentTransactions);
           setReferrals({ totalReferrals: data.stats.totalReferrals, earnings: data.stats.referralEarnings });
         } else {
+          // The 401 case is handled centrally by the auth interceptor now, so
+          // this only has to report real errors.
           toast.error(data.message);
-          // If token invalid, redirect to login
-          if (data.message === 'Not authorized, no token' || data.message === 'Not authorized, token failed') {
-            localStorage.removeItem('token');
-            window.location.href = '/login';
-          }
         }
       } catch (err) {
         toast.error('Failed to load dashboard');

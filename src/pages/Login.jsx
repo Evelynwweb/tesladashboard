@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Mail, Lock, Loader2, LogIn, Shield, Eye, EyeOff } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
+import api from '../api';
 import { useTheme } from '../context/ThemeContext';
 
 const Login = () => {
@@ -10,24 +11,19 @@ const Login = () => {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm();
 
   const onSubmit = async (data) => {
-  try {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: data.email, password: data.password })
-    });
-    const result = await res.json();
-    if (res.ok) {
+    try {
+      const result = await api.post(
+        '/login',
+        { email: data.email, password: data.password },
+        { auth: false }
+      );
       localStorage.setItem('token', result.token);
       toast.success('Login successful!');
       window.location.href = '/dashboard';
-    } else {
-      toast.error(result.message);
+    } catch (err) {
+      toast.error(err.message);
     }
-  } catch (err) {
-    toast.error(err.message);
-  }
-};
+  };
 
   return (
     <div className="min-h-screen bg-light-100 dark:bg-dark transition-colors duration-200 flex flex-col lg:flex-row">
@@ -158,7 +154,7 @@ const Login = () => {
               <div className="mt-8 text-center">
                 <p className="text-sm dark:text-gray-400 text-gray-600">
                   Don't have an account?{' '}
-                  <a href="/register" className="font-medium text-primary hover:text-primary-600 transition-colors">
+                  <a href="/verify-email" className="font-medium text-primary hover:text-primary-600 transition-colors">
                     Sign up now
                   </a>
                 </p>

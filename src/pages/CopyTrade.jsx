@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Wallet } from 'lucide-react';
 import toast from 'react-hot-toast';
+import api from '../api';
 
 const traders = [
   {
@@ -106,11 +107,22 @@ const CopyTrade = () => {
 
     setLoading((prev) => ({ ...prev, [trader.id]: true }));
 
-    // Simulate API call – replace with actual POST to /dashboard/copytrader
-    setTimeout(() => {
+    // This was a setTimeout stub: it reported success without ever debiting the
+    // balance or recording the investment.
+    try {
+      await api.post('/copy-trade/invest', {
+        traderId: trader.id,
+        traderName: trader.name,
+        amount: Number(amount),
+        duration: trader.duration,
+      });
       toast.success(`Successfully invested $${amount} in ${trader.name}`);
+      setAmounts((prev) => ({ ...prev, [trader.id]: '' }));
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
       setLoading((prev) => ({ ...prev, [trader.id]: false }));
-    }, 1000);
+    }
   };
 
   return (

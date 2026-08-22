@@ -1,18 +1,19 @@
 import { useState, useEffect } from 'react';
 import { User, Shield, Wallet, Bell, Save, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import api from '../api';
 
 const AccountSettings = () => {
   // Tab state
   const [activeTab, setActiveTab] = useState('personal');
 
-  // Personal info form state
+  // Personal info form state (populated from the API on mount)
   const [personalInfo, setPersonalInfo] = useState({
-    name: 'Low Income',
-    email: 'Lowincomehomes47@gmail.com',
-    phone: '09052040500',
+    name: '',
+    email: '',
+    phone: '',
     dob: '',
-    country: 'United States of America',
+    country: '',
     address: '',
   });
 
@@ -53,6 +54,28 @@ const AccountSettings = () => {
     password: false,
     preferences: false,
   });
+
+  // Load the signed-in user instead of showing hardcoded placeholder details.
+  useEffect(() => {
+    api.get('/users/me')
+      .then((user) => {
+        setPersonalInfo({
+          name: user.name || '',
+          email: user.email || '',
+          phone: user.phone || '',
+          dob: user.dob || '',
+          country: user.country || '',
+          address: user.address || '',
+        });
+        if (user.withdrawalSettings) {
+          setWithdrawalInfo((prev) => ({ ...prev, ...user.withdrawalSettings }));
+        }
+        if (user.preferences) {
+          setPreferences((prev) => ({ ...prev, ...user.preferences }));
+        }
+      })
+      .catch((err) => toast.error(err.message));
+  }, []);
 
   // Password strength calculator
   useEffect(() => {
@@ -101,24 +124,37 @@ const AccountSettings = () => {
     setPreferences({ ...preferences, [name]: value });
   };
 
-  // Submit handlers (mock API calls)
+  // Submit handlers. These used to be setTimeout stubs that reported success
+  // without ever contacting the API, so nothing on this page actually saved.
   const updatePersonalInfo = async (e) => {
     e.preventDefault();
-    setLoading({ ...loading, personal: true });
-    // Simulate API call
-    setTimeout(() => {
+    setLoading((prev) => ({ ...prev, personal: true }));
+    try {
+      await api.put('/users/profile', {
+        name: personalInfo.name,
+        phone: personalInfo.phone,
+        dob: personalInfo.dob,
+        address: personalInfo.address,
+      });
       toast.success('Profile updated successfully!');
-      setLoading({ ...loading, personal: false });
-    }, 1000);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setLoading((prev) => ({ ...prev, personal: false }));
+    }
   };
 
   const updateWithdrawalInfo = async (e) => {
     e.preventDefault();
-    setLoading({ ...loading, withdrawal: true });
-    setTimeout(() => {
+    setLoading((prev) => ({ ...prev, withdrawal: true }));
+    try {
+      await api.put('/users/withdrawal-settings', withdrawalInfo);
       toast.success('Withdrawal settings saved!');
-      setLoading({ ...loading, withdrawal: false });
-    }, 1000);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setLoading((prev) => ({ ...prev, withdrawal: false }));
+    }
   };
 
   const updatePassword = async (e) => {
@@ -131,21 +167,29 @@ const AccountSettings = () => {
       toast.error('Password must be at least 8 characters');
       return;
     }
-    setLoading({ ...loading, password: true });
-    setTimeout(() => {
+    setLoading((prev) => ({ ...prev, password: true }));
+    try {
+      await api.put('/users/password', passwordData);
       toast.success('Password updated successfully!');
       setPasswordData({ current_password: '', password: '', password_confirmation: '' });
-      setLoading({ ...loading, password: false });
-    }, 1000);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setLoading((prev) => ({ ...prev, password: false }));
+    }
   };
 
   const updatePreferences = async (e) => {
     e.preventDefault();
-    setLoading({ ...loading, preferences: true });
-    setTimeout(() => {
+    setLoading((prev) => ({ ...prev, preferences: true }));
+    try {
+      await api.put('/users/preferences', preferences);
       toast.success('Notification preferences saved!');
-      setLoading({ ...loading, preferences: false });
-    }, 1000);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setLoading((prev) => ({ ...prev, preferences: false }));
+    }
   };
 
   const tabs = [
@@ -175,7 +219,7 @@ const AccountSettings = () => {
                 </div>
                 <div>
                   <p className="text-xs dark:text-gray-400 text-gray-500">Account</p>
-                  <p className="text-lg font-semibold dark:text-white text-dark">Low Income</p>
+                  <p className="text-lg font-semibold dark:text-white text-dark">{personalInfo.name}</p>
                 </div>
               </div>
             </div>

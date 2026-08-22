@@ -5,7 +5,8 @@ import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import MobileNav from './MobileNav';
 import { Toaster } from 'react-hot-toast';
-import SmartsuppChat from './SmartsuppChat';  // ← ADD THIS
+import SmartsuppChat from './SmartsuppChat';
+import ImpersonationBanner from './ImpersonationBanner';
 
 const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -14,6 +15,7 @@ const Layout = () => {
     <div className="flex flex-col md:flex-row min-h-screen bg-light dark:bg-dark transition-colors duration-200">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="w-full flex flex-col">
+        <ImpersonationBanner />
         <TopBar onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-grow">
           <Outlet />
