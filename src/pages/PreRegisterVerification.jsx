@@ -3,10 +3,12 @@ import { useForm } from 'react-hook-form';
 import { Shield, Key, CheckCircle, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../api';
+import useAppConfig from '../hooks/useAppConfig';
 import { useTheme } from '../context/ThemeContext';
 
 const PreRegisterVerification = () => {
   const { dark, toggleDark } = useTheme();
+  const config = useAppConfig();
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm();
   const [email, setEmail] = useState('');
   const [codeSent, setCodeSent] = useState(false);
@@ -18,6 +20,13 @@ const PreRegisterVerification = () => {
     const ref = new URLSearchParams(window.location.search).get('ref');
     if (ref) localStorage.setItem('referralCode', ref);
   }, []);
+
+  // Verification is off on the API: don't make people sit on a dead step.
+  useEffect(() => {
+    if (config && !config.requireEmailVerification) {
+      window.location.replace(`/register${window.location.search}`);
+    }
+  }, [config]);
 
   const requestCode = async (e) => {
     e.preventDefault();

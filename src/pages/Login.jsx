@@ -3,10 +3,14 @@ import { useForm } from 'react-hook-form';
 import { Mail, Lock, Loader2, LogIn, Shield, Eye, EyeOff } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import api from '../api';
+import useAppConfig from '../hooks/useAppConfig';
 import { useTheme } from '../context/ThemeContext';
 
 const Login = () => {
   const { dark, toggleDark } = useTheme();
+  const config = useAppConfig();
+  // Skips the verification step entirely while it is switched off on the API.
+  const signupPath = config?.requireEmailVerification ? '/verify-email' : '/register';
   const [showPassword, setShowPassword] = useState(false);
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm();
 
@@ -154,7 +158,7 @@ const Login = () => {
               <div className="mt-8 text-center">
                 <p className="text-sm dark:text-gray-400 text-gray-600">
                   Don't have an account?{' '}
-                  <a href="/verify-email" className="font-medium text-primary hover:text-primary-600 transition-colors">
+                  <a href={signupPath} className="font-medium text-primary hover:text-primary-600 transition-colors">
                     Sign up now
                   </a>
                 </p>
