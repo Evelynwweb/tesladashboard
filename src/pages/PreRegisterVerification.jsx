@@ -59,7 +59,7 @@ const PreRegisterVerification = () => {
       localStorage.setItem('tempToken', result.tempToken);
       localStorage.setItem('verifiedEmail', email);
       toast.success('Code verified! Redirecting to registration...');
-      window.location.href = '/register';
+      window.location.assign('/register');
     } catch (err) {
       toast.error(err.message);
     }

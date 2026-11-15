@@ -30,7 +30,7 @@ const BuyTesla = () => {
       } else {
         toast.error(data.message || 'Failed to send');
       }
-    } catch (err) {
+    } catch {
       toast.error('Network error');
     } finally {
       setLoading(false);

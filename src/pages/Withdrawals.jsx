@@ -1,11 +1,10 @@
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { Wallet, CircleCheckBig, ClockArrowDown, History } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Withdrawals = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [withdrawalMethods, setWithdrawalMethods] = useState([]);
 
   // Password confirmation check (keep as is)
@@ -29,7 +28,7 @@ const Withdrawals = () => {
         } else {
           toast.error('Failed to load withdrawal methods');
         }
-      } catch (err) {
+      } catch {
         toast.error('Error loading methods');
       }
     };

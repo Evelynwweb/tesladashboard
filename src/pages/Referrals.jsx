@@ -41,7 +41,7 @@ const Referrals = () => {
         toast.success('Referral ID copied!');
         setTimeout(() => setCopiedId(false), 2000);
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to copy. Please try again.');
     }
   };

@@ -2,11 +2,34 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import toast from 'react-hot-toast';
+import api from '../api';
 import {
   Wallet, Eye, EyeOff, PlusCircle, ArrowUpRight, Gift, ArrowDown, ArrowUp,
   Shield, Package, Inbox, Download, Upload, Repeat, ChevronLeft, ChevronRight,
   Users, Copy, AlertCircle, DollarSign
 } from 'lucide-react';
+
+const EmptyTransactions = ({ type }) => (
+  <div className="p-6 text-center">
+    <div className="flex flex-col items-center justify-center">
+      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+        <Inbox className="h-6 w-6 text-primary" />
+      </div>
+      <p className="text-sm font-medium dark:text-white text-dark mb-1">No {type} found</p>
+      <p className="text-xs dark:text-gray-400 text-gray-500">Your {type} history will appear here</p>
+    </div>
+  </div>
+);
+
+const TYPE_LABELS = { profit: 'Profit', investment: 'Investment', bonus: 'Bonus', referral: 'Referral' };
+const formatMoney = (amount) => {
+  const n = Number(amount) || 0;
+  return `${n < 0 ? '-' : ''}${Math.abs(n).toFixed(2)}`;
+};
+const formatDate = (d) => (d ? new Date(d).toLocaleString() : 'N/A');
+const amountClass = (row) =>
+  Number(row.amount) < 0 ? 'text-red-500' : row.type === 'profit' ? 'text-emerald-500' : 'text-dark dark:text-white';
+const rowMode = (row) => row.paymentMethod || row.method || TYPE_LABELS[row.type] || row.type || 'N/A';
 
 const Dashboard = () => {
   const { dark } = useTheme();
@@ -24,6 +47,8 @@ const Dashboard = () => {
   const [touchEnd, setTouchEnd] = useState(0);
   const [userData, setUserData] = useState(null);
   const [recentTransactions, setRecentTransactions] = useState([]);
+  const [recentDeposits, setRecentDeposits] = useState([]);
+  const [recentWithdrawals, setRecentWithdrawals] = useState([]);
   const [referrals, setReferrals] = useState({ totalReferrals: 0, earnings: 0 });
   const [loading, setLoading] = useState(true);
 
@@ -97,26 +122,26 @@ const Dashboard = () => {
   // Fetch dashboard data from backend
   useEffect(() => {
     const fetchDashboard = async () => {
-      try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/dashboard`, {
-  headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-});
-        
-        const data = await res.json();
-        if (res.ok) {
-          setUserData(data.user);
-          setRecentTransactions(data.recentTransactions);
-          setReferrals({ totalReferrals: data.stats.totalReferrals, earnings: data.stats.referralEarnings });
-        } else {
-          // The 401 case is handled centrally by the auth interceptor now, so
-          // this only has to report real errors.
-          toast.error(data.message);
-        }
-      } catch (err) {
-        toast.error('Failed to load dashboard');
-      } finally {
-        setLoading(false);
+      const [dash, deps, wds] = await Promise.allSettled([
+        api.get('/dashboard'),
+        api.get('/transactions/deposits'),
+        api.get('/transactions/withdrawals'),
+      ]);
+      if (dash.status === 'fulfilled') {
+        const data = dash.value || {};
+        setUserData(data.user || null);
+        setRecentTransactions(Array.isArray(data.recentTransactions) ? data.recentTransactions : []);
+        setReferrals({
+          totalReferrals: data.stats?.totalReferrals || 0,
+          earnings: data.stats?.referralEarnings || 0,
+        });
+      } else {
+        // 401s are handled centrally (redirect to login); report anything else.
+        toast.error(dash.reason?.message || 'Failed to load dashboard');
       }
+      if (deps.status === 'fulfilled' && Array.isArray(deps.value)) setRecentDeposits(deps.value.slice(0, 5));
+      if (wds.status === 'fulfilled' && Array.isArray(wds.value)) setRecentWithdrawals(wds.value.slice(0, 5));
+      setLoading(false);
     };
     fetchDashboard();
   }, []);
@@ -136,17 +161,10 @@ const Dashboard = () => {
     { id: 'other', label: 'Others', icon: Repeat },
   ];
 
-  const EmptyTransactions = ({ type }) => (
-    <div className="p-6 text-center">
-      <div className="flex flex-col items-center justify-center">
-        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
-          <Inbox className="h-6 w-6 text-primary" />
-        </div>
-        <p className="text-sm font-medium dark:text-white text-dark mb-1">No {type} found</p>
-        <p className="text-xs dark:text-gray-400 text-gray-500">Your {type} history will appear here</p>
-      </div>
-    </div>
-  );
+  const [activeRows, emptyLabel] =
+    activeTab === 'deposit' ? [recentDeposits, 'deposits'] :
+    activeTab === 'withdrawal' ? [recentWithdrawals, 'withdrawals'] :
+    [recentTransactions.filter((t) => t.type !== 'deposit' && t.type !== 'withdrawal'), 'transactions'];
 
   if (loading) {
     return (
@@ -477,72 +495,46 @@ const Dashboard = () => {
 
             {/* Tab Content */}
             <div className="overflow-x-auto">
-              {activeTab === 'deposit' && (
-                <div className="hidden sm:block">
-                  <table className="min-w-full divide-y dark:divide-dark-100 divide-light-200">
+              {activeRows.length === 0 ? (
+                <EmptyTransactions type={emptyLabel} />
+              ) : (
+                <>
+                  <table className="hidden sm:table min-w-full divide-y dark:divide-dark-100 divide-light-200">
                     <thead>
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium dark:text-gray-400 text-gray-500 uppercase tracking-wider">Amount</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium dark:text-gray-400 text-gray-500 uppercase tracking-wider">Payment Mode</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium dark:text-gray-400 text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium dark:text-gray-400 text-gray-500 uppercase tracking-wider">{activeTab === 'other' ? 'Type' : 'Payment Mode'}</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium dark:text-gray-400 text-gray-500 uppercase tracking-wider">{activeTab === 'other' ? 'Plan/Narration' : 'Status'}</th>
                         <th className="px-6 py-3 text-left text-xs font-medium dark:text-gray-400 text-gray-500 uppercase tracking-wider">Date</th>
                       </tr>
                     </thead>
-                    <tbody>
-                      <tr>
-                        <td colSpan="4">
-                          <EmptyTransactions type="deposits" />
-                        </td>
-                      </tr>
+                    <tbody className="divide-y dark:divide-dark-100 divide-light-200">
+                      {activeRows.map((row, idx) => (
+                        <tr key={row._id || idx}>
+                          <td className={`px-6 py-4 text-sm font-medium whitespace-nowrap ${amountClass(row)}`}>{formatMoney(row.amount)}</td>
+                          <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">{rowMode(row)}</td>
+                          <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{activeTab === 'other' ? (row.description || 'N/A') : (row.status || 'N/A')}</td>
+                          <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">{formatDate(row.createdAt || row.date)}</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
-                </div>
+                  <ul className="sm:hidden divide-y dark:divide-dark-100 divide-light-200">
+                    {activeRows.map((row, idx) => (
+                      <li key={row._id || idx} className="p-4 flex justify-between items-start gap-3">
+                        <div>
+                          <p className={`text-base font-semibold ${amountClass(row)}`}>{formatMoney(row.amount)}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{rowMode(row)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{activeTab === 'other' ? '' : row.status}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{formatDate(row.createdAt || row.date)}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </>
               )}
-              {activeTab === 'withdrawal' && (
-                <div className="hidden sm:block">
-                  <table className="min-w-full divide-y dark:divide-dark-100 divide-light-200">
-                    <thead>
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium dark:text-gray-400 text-gray-500 uppercase tracking-wider">Amount</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium dark:text-gray-400 text-gray-500 uppercase tracking-wider">Payment Mode</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium dark:text-gray-400 text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium dark:text-gray-400 text-gray-500 uppercase tracking-wider">Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td colSpan="4">
-                          <EmptyTransactions type="withdrawals" />
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              {activeTab === 'other' && (
-                <div className="hidden sm:block">
-                  <table className="min-w-full divide-y dark:divide-dark-100 divide-light-200">
-                    <thead>
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium dark:text-gray-400 text-gray-500 uppercase tracking-wider">Amount</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium dark:text-gray-400 text-gray-500 uppercase tracking-wider">Type</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium dark:text-gray-400 text-gray-500 uppercase tracking-wider">Plan/Narration</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium dark:text-gray-400 text-gray-500 uppercase tracking-wider">Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td colSpan="4">
-                          <EmptyTransactions type="transactions" />
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              <div className="sm:hidden">
-                <EmptyTransactions type={activeTab === 'deposit' ? 'deposits' : activeTab === 'withdrawal' ? 'withdrawals' : 'transactions'} />
-              </div>
             </div>
           </div>
         </div>

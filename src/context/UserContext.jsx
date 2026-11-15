@@ -6,27 +6,30 @@ import api, { getToken } from '../api';
 // the signed-in user from here, fetched once and shared.
 const UserContext = createContext({ user: null, loading: true, refresh: () => {} });
 
+// Resolves to the signed-in user, or null (no token / request failed).
+// api.get already redirects to /login on a 401.
+const loadUser = () =>
+  getToken() ? api.get('/users/me').catch(() => null) : Promise.resolve(null);
+
 export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => Boolean(getToken()));
 
   const refresh = useCallback(async () => {
-    if (!getToken()) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
-    try {
-      setUser(await api.get('/users/me'));
-    } catch {
-      // api.get already redirects to /login on a 401; nothing to show here.
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
+    const next = await loadUser();
+    setUser(next);
+    setLoading(false);
   }, []);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    let cancelled = false;
+    loadUser().then((next) => {
+      if (cancelled) return;
+      setUser(next);
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <UserContext.Provider value={{ user, loading, refresh, setUser }}>
@@ -35,9 +38,11 @@ export const UserProvider = ({ children }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useUser = () => useContext(UserContext);
 
 // "Ada Lovelace" -> "AL", "alice" -> "AL"
+// eslint-disable-next-line react-refresh/only-export-components
 export const initialsOf = (user) => {
   if (!user) return '';
   const source = (user.name || user.username || '').trim();

@@ -55,8 +55,6 @@ const WithdrawFunds = () => {
   const [amount, setAmount] = useState('');
   const [details, setDetails] = useState('');
   const [wcCode, setWcCode] = useState('');
-  const [fee, setFee] = useState(0);
-  const [totalCost, setTotalCost] = useState(0);
   const [balance, setBalance] = useState(0);
   const [loadingBalance, setLoadingBalance] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -74,7 +72,7 @@ const WithdrawFunds = () => {
         if (res.ok) {
           setBalance(data.user.balance);
         }
-      } catch (err) {
+      } catch {
         toast.error('Could not load balance');
       } finally {
         setLoadingBalance(false);
@@ -83,12 +81,9 @@ const WithdrawFunds = () => {
     fetchBalance();
   }, []);
 
-  useEffect(() => {
-    const amt = parseFloat(amount) || 0;
-    const calculatedFee = (amt * feePercentage) / 100;
-    setFee(calculatedFee);
-    setTotalCost(amt + calculatedFee);
-  }, [amount]);
+  const amountValue = parseFloat(amount) || 0;
+  const fee = (amountValue * feePercentage) / 100;
+  const totalCost = amountValue + fee;
 
   const handleAmountChange = (e) => {
     setAmount(e.target.value);
@@ -140,7 +135,7 @@ const WithdrawFunds = () => {
       } else {
         toast.error(data.message || 'Submission failed');
       }
-    } catch (err) {
+    } catch {
       toast.error('Network error. Please try again.');
     } finally {
       setSubmitting(false);

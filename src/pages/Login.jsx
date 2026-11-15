@@ -23,7 +23,7 @@ const Login = () => {
       );
       localStorage.setItem('token', result.token);
       toast.success('Login successful!');
-      window.location.href = '/dashboard';
+      window.location.assign('/dashboard');
     } catch (err) {
       toast.error(err.message);
     }

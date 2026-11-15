@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Wallet } from 'lucide-react'
 import toast from 'react-hot-toast'
+import api from '../api'
 
 const TradingViewWidget = ({ symbol }) => {
   const widgetUrl = `https://s.tradingview.com/widgetembed/?frameElementId=tradingview_${symbol.replace(/[^a-zA-Z]/g, '')}&symbol=${symbol}&interval=1&hidesidetoolbar=1&theme=dark&style=1&timezone=Etc/UTC&studies=[]`
@@ -40,36 +41,24 @@ const Stocks = () => {
   const [loading, setLoading] = useState({})
   const [pageLoading, setPageLoading] = useState(true)
 
-  const API_URL = import.meta.env.VITE_API_URL
-
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        const [stocksRes, balanceRes] = await Promise.all([
-          fetch(`${API_URL}/stocks`),
-          fetch(`${API_URL}/dashboard`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-          })
-        ])
-        const stocksData = await stocksRes.json()
-        const balanceData = await balanceRes.json()
-
-        if (stocksRes.ok) {
-          setStocks(stocksData)
-        } else {
-          toast.error('Could not load stocks')
-        }
-        if (balanceRes.ok) {
-          setBalance(balanceData.user.balance)
-        }
-      } catch (err) {
-        toast.error('Network error')
-      } finally {
-        setPageLoading(false)
+      const [stocksResult, dashboardResult] = await Promise.allSettled([
+        api.get('/stocks', { auth: false }),
+        api.get('/dashboard'),
+      ])
+      if (stocksResult.status === 'fulfilled' && Array.isArray(stocksResult.value)) {
+        setStocks(stocksResult.value)
+      } else {
+        toast.error(stocksResult.reason?.message || 'Could not load stocks')
       }
+      if (dashboardResult.status === 'fulfilled') {
+        setBalance(Number(dashboardResult.value?.user?.balance) || 0)
+      }
+      setPageLoading(false)
     }
     fetchData()
-  }, [API_URL])
+  }, [])
 
   const handleAmountChange = (stockId, value) => {
     setAmounts(prev => ({ ...prev, [stockId]: value }))
@@ -77,10 +66,10 @@ const Stocks = () => {
 
   const handleSubmit = async (stock, e) => {
     e.preventDefault()
-    const amount = amounts[stock.stockId]
+    const amount = Number(amounts[stock.stockId])
 
     if (!amount || amount < stock.min || amount > stock.max) {
-      toast.error(`Amount must be between $${stock.min.toLocaleString()} and $${stock.max.toLocaleString()}`)
+      toast.error(`Amount must be between $${Number(stock.min || 0).toLocaleString()} and $${Number(stock.max || 0).toLocaleString()}`)
       return
     }
     if (amount > balance) {
@@ -91,30 +80,18 @@ const Stocks = () => {
     setLoading(prev => ({ ...prev, [stock.stockId]: true }))
 
     try {
-      const res = await fetch(`${API_URL}/stocks/invest`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          stockId: stock.stockId,
-          stockName: stock.name,
-          symbol: stock.symbol,
-          amount,
-          duration: stock.duration
-        })
+      await api.post('/stocks/invest', {
+        stockId: stock.stockId,
+        stockName: stock.name,
+        symbol: stock.symbol,
+        amount,
+        duration: stock.duration,
       })
-      const data = await res.json()
-      if (res.ok) {
-        toast.success(`Successfully invested $${amount} in ${stock.name}`)
-        setBalance(prev => prev - amount)
-        setAmounts(prev => ({ ...prev, [stock.stockId]: '' }))
-      } else {
-        toast.error(data.message || 'Investment failed')
-      }
+      toast.success(`Successfully invested ${amount} in ${stock.name}`)
+      setBalance(prev => prev - amount)
+      setAmounts(prev => ({ ...prev, [stock.stockId]: '' }))
     } catch (err) {
-      toast.error('Network error')
+      toast.error(err.message || 'Investment failed')
     } finally {
       setLoading(prev => ({ ...prev, [stock.stockId]: false }))
     }
@@ -176,11 +153,15 @@ const Stocks = () => {
                     <ul className="my-3 space-y-2">
                       <li className="mb-2">
                         <small className="text-gray-500 dark:text-gray-400">Min. Investment</small>
-                        <h6 className="text-base text-dark dark:text-white">${stock.min.toLocaleString()}</h6>
+                        <h6 className="text-base text-dark dark:text-white">${Number(stock.min || 0).toLocaleString()}</h6>
                       </li>
                       <li className="mb-2">
                         <small className="text-gray-500 dark:text-gray-400">Max. Investment</small>
-                        <h6 className="text-base text-dark dark:text-white">${stock.max.toLocaleString()}</h6>
+                        <h6 className="text-base text-dark dark:text-white">${Number(stock.max || 0).toLocaleString()}</h6>
+                      </li>
+                      <li className="mb-2">
+                        <small className="text-gray-500 dark:text-gray-400">Daily Profit</small>
+                        <h6 className="text-base text-emerald-600 dark:text-emerald-400">{stock.dailyProfitRate ?? 0.5}%</h6>
                       </li>
                     </ul>
 

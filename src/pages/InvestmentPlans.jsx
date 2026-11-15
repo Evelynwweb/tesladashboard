@@ -94,7 +94,7 @@ const InvestmentPlans = () => {
       } else {
         toast.error(data.message || 'Investment failed');
       }
-    } catch (err) {
+    } catch {
       toast.error('Network error');
     } finally {
       setLoading(prev => ({ ...prev, [plan._id]: false }));

@@ -1,10 +1,8 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Download, History, Car, Upload, Link, Briefcase, Blocks, CopySlash, Bot, Folder, TrendingUp, Users, Settings, Wallet, Shield } from 'lucide-react';
-import { useTheme } from '../context/ThemeContext';
+import { Home, Download, History, Car, Upload, Link, Briefcase, Blocks, CopySlash, Bot, Folder, TrendingUp, Users, Settings, Wallet } from 'lucide-react';
 import { useUser, initialsOf } from '../context/UserContext';
 
 const Sidebar = ({ isOpen, onClose }) => {
-  const { dark } = useTheme();
   // Name and balance came from a hardcoded template value plus a duplicate
   // /dashboard request; both now come from the shared user context.
   const { user } = useUser();

@@ -23,7 +23,7 @@ const TradingHistory = () => {
         } else {
           toast.error('Failed to load trading history');
         }
-      } catch (err) {
+      } catch {
         toast.error('Network error');
       } finally {
         setLoading(false);

@@ -3,6 +3,21 @@ import { User, Shield, Wallet, Bell, Save, Eye, EyeOff, CheckCircle } from 'luci
 import toast from 'react-hot-toast';
 import api from '../api';
 
+const getPasswordStrength = (pwd = '') => {
+  let strength = 0;
+  if (pwd.length >= 8) strength += 25;
+  if (/[A-Z]/.test(pwd)) strength += 25;
+  if (/[0-9]/.test(pwd)) strength += 25;
+  if (/[^A-Za-z0-9]/.test(pwd)) strength += 25;
+  if (!pwd) return { width: '0%', color: 'bg-danger', text: '' };
+  const [color, text] =
+    strength <= 25 ? ['bg-danger', 'Weak password'] :
+    strength <= 50 ? ['bg-accent', 'Moderate password'] :
+    strength <= 75 ? ['bg-tertiary', 'Good password'] :
+    ['bg-secondary', 'Strong password'];
+  return { width: `${strength}%`, color, text };
+};
+
 const AccountSettings = () => {
   // Tab state
   const [activeTab, setActiveTab] = useState('personal');
@@ -38,7 +53,6 @@ const AccountSettings = () => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [passwordStrength, setPasswordStrength] = useState({ width: '0%', color: 'bg-danger', text: '' });
 
   // Preferences (email notifications)
   const [preferences, setPreferences] = useState({
@@ -77,32 +91,8 @@ const AccountSettings = () => {
       .catch((err) => toast.error(err.message));
   }, []);
 
-  // Password strength calculator
-  useEffect(() => {
-    const pwd = passwordData.password;
-    let strength = 0;
-    if (pwd.length >= 8) strength += 25;
-    if (/[A-Z]/.test(pwd)) strength += 25;
-    if (/[0-9]/.test(pwd)) strength += 25;
-    if (/[^A-Za-z0-9]/.test(pwd)) strength += 25;
-
-    let color = 'bg-danger';
-    let text = '';
-    if (strength <= 25) {
-      color = 'bg-danger';
-      text = 'Weak password';
-    } else if (strength <= 50) {
-      color = 'bg-accent';
-      text = 'Moderate password';
-    } else if (strength <= 75) {
-      color = 'bg-tertiary';
-      text = 'Good password';
-    } else {
-      color = 'bg-secondary';
-      text = 'Strong password';
-    }
-    setPasswordStrength({ width: `${strength}%`, color, text });
-  }, [passwordData.password]);
+  // Password strength (derived from the typed password)
+  const passwordStrength = getPasswordStrength(passwordData.password);
 
   // Handle personal info change
   const handlePersonalChange = (e) => {

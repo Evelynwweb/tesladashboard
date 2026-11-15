@@ -3,6 +3,30 @@ import { Download, Upload, Repeat, Inbox, Wallet } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../api';
 
+// Empty state component
+const EmptyState = ({ type }) => (
+  <div className="flex flex-col items-center justify-center py-6 sm:py-8">
+    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+      <Inbox className="h-6 w-6 text-primary" />
+    </div>
+    <p className="text-sm font-medium dark:text-white text-dark mb-1">
+      No {type} found
+    </p>
+    <p className="text-xs dark:text-gray-400 text-gray-500">
+      Your {type} history will appear here
+    </p>
+  </div>
+);
+
+
+const TYPE_LABELS = {
+  profit: 'Profit',
+  investment: 'Investment',
+  bonus: 'Bonus',
+  referral: 'Referral',
+};
+const typeLabel = (type) => TYPE_LABELS[type] || type || 'N/A';
+
 const TransactionHistory = () => {
   const [activeTab, setActiveTab] = useState('deposit');
   const [loading, setLoading] = useState(true);
@@ -32,10 +56,10 @@ const TransactionHistory = () => {
           api.get('/transactions/others'),
         ]);
 
-        setCurrentBalance(dashboard.user.balance);
-        setDeposits(depositsData);
-        setWithdrawals(withdrawalsData);
-        setOthers(othersData);
+        setCurrentBalance(Number(dashboard?.user?.balance) || 0);
+        setDeposits(Array.isArray(depositsData) ? depositsData : []);
+        setWithdrawals(Array.isArray(withdrawalsData) ? withdrawalsData : []);
+        setOthers(Array.isArray(othersData) ? othersData : []);
       } catch (err) {
         toast.error(err.message || 'Failed to load transaction history');
       } finally {
@@ -54,26 +78,12 @@ const TransactionHistory = () => {
 
   // Helper to format currency
   const formatAmount = (amount) => {
-    return `$${parseFloat(amount).toFixed(2)}`;
+    const n = Number(amount) || 0;
+    return `${n < 0 ? '-' : ''}${Math.abs(n).toFixed(2)}`;
   };
 
-  // Empty state component
-  const EmptyState = ({ type }) => (
-    <div className="flex flex-col items-center justify-center py-6 sm:py-8">
-      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
-        <Inbox className="h-6 w-6 text-primary" />
-      </div>
-      <p className="text-sm font-medium dark:text-white text-dark mb-1">
-        No {type} found
-      </p>
-      <p className="text-xs dark:text-gray-400 text-gray-500">
-        Your {type} history will appear here
-      </p>
-    </div>
-  );
-
   // Deposit Table (with real data)
-  const DepositTable = () => (
+  const renderDepositTable = () => (
     <div className="overflow-x-auto sm:mx-0">
       <table className="min-w-full divide-y dark:divide-dark-100 divide-light-200">
         <thead>
@@ -121,7 +131,7 @@ const TransactionHistory = () => {
   );
 
   // Withdrawal Table
-  const WithdrawalTable = () => (
+  const renderWithdrawalTable = () => (
     <div className="overflow-x-auto sm:mx-0">
       <table className="min-w-full divide-y dark:divide-dark-100 divide-light-200">
         <thead>
@@ -169,7 +179,7 @@ const TransactionHistory = () => {
   );
 
   // Others Table (bonus, referrals, etc.)
-  const OtherTable = () => (
+  const renderOtherTable = () => (
     <div className="overflow-x-auto sm:mx-0">
       <table className="min-w-full divide-y dark:divide-dark-100 divide-light-200">
         <thead>
@@ -189,12 +199,14 @@ const TransactionHistory = () => {
             </tr>
           ) : (
             others.map((tx, idx) => (
-              <tr key={idx}>
-                <td className="px-6 py-4 text-sm font-medium text-dark dark:text-white whitespace-nowrap">
+              <tr key={tx._id || idx}>
+                <td className={`px-6 py-4 text-sm font-medium whitespace-nowrap ${
+                  Number(tx.amount) < 0 ? 'text-red-500' : tx.type === 'profit' ? 'text-emerald-500' : 'text-dark dark:text-white'
+                }`}>
                   {formatAmount(tx.amount)}
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                  {tx.type || 'N/A'}
+                  {typeLabel(tx.type)}
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                   {tx.description || tx.plan || 'N/A'}
@@ -211,26 +223,18 @@ const TransactionHistory = () => {
   );
 
   // Mobile card view (same for all tabs)
-  const MobileCard = () => {
-    let data = [];
-    let typeLabel = '';
-    if (activeTab === 'deposit') {
-      data = deposits;
-      typeLabel = 'deposits';
-    } else if (activeTab === 'withdrawal') {
-      data = withdrawals;
-      typeLabel = 'withdrawals';
-    } else {
-      data = others;
-      typeLabel = 'transactions';
-    }
+  const renderMobileCard = () => {
+    const [data, emptyLabel] =
+      activeTab === 'deposit' ? [deposits, 'deposits'] :
+      activeTab === 'withdrawal' ? [withdrawals, 'withdrawals'] :
+      [others, 'transactions'];
 
     if (data.length === 0) {
       return (
         <div className="sm:hidden">
           <ul className="divide-y dark:divide-dark-100 divide-light-200">
             <li className="p-6 text-center">
-              <EmptyState type={typeLabel} />
+              <EmptyState type={emptyLabel} />
             </li>
           </ul>
         </div>
@@ -263,7 +267,7 @@ const TransactionHistory = () => {
               <p className="text-sm dark:text-white text-dark">
                 {activeTab === 'deposit' ? (item.paymentMethod || 'N/A') :
                  activeTab === 'withdrawal' ? (item.method || 'N/A') :
-                 (item.type || 'N/A')}
+                 typeLabel(item.type)}
               </p>
             </div>
             <div className="mt-2">
@@ -361,21 +365,21 @@ const TransactionHistory = () => {
         {/* Tab Content */}
         <div className="p-0 sm:p-6">
           <div className={activeTab === 'deposit' ? 'block' : 'hidden'}>
-            <MobileCard />
+            {renderMobileCard()}
             <div className="hidden sm:block overflow-hidden">
-              <DepositTable />
+              {renderDepositTable()}
             </div>
           </div>
           <div className={activeTab === 'withdrawal' ? 'block' : 'hidden'}>
-            <MobileCard />
+            {renderMobileCard()}
             <div className="hidden sm:block overflow-hidden">
-              <WithdrawalTable />
+              {renderWithdrawalTable()}
             </div>
           </div>
           <div className={activeTab === 'other' ? 'block' : 'hidden'}>
-            <MobileCard />
+            {renderMobileCard()}
             <div className="hidden sm:block overflow-hidden">
-              <OtherTable />
+              {renderOtherTable()}
             </div>
           </div>
         </div>

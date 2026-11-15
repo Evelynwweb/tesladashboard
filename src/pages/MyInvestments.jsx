@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Wallet } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import api from '../api';
 
 // SVG icons (unchanged)
 const InfoCircleIcon = () => (
@@ -31,19 +32,12 @@ const MyInvestments = () => {
   useEffect(() => {
     const fetchInvestments = async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/investments/my`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        const data = await res.json();
-        if (res.ok) {
-          // your backend returns { totalInvested, investments }
-          setInvestments(data.investments);
-          setTotalInvested(data.totalInvested);
-        } else {
-          toast.error('Could not load investments');
-        }
+        // backend returns { totalInvested, investments } (plans + stocks)
+        const data = await api.get('/investments/my');
+        setInvestments(Array.isArray(data.investments) ? data.investments : []);
+        setTotalInvested(Number(data.totalInvested) || 0);
       } catch (err) {
-        toast.error('Network error');
+        toast.error(err.message || 'Could not load investments');
       } finally {
         setLoading(false);
       }
@@ -117,8 +111,16 @@ const MyInvestments = () => {
                 <div>
                   <h3 className="font-bold text-dark dark:text-white text-lg">{inv.planName}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    Invested: ${inv.amount.toLocaleString()} | ROI: {inv.roiPercentage}%
+                    Invested: ${Number(inv.amount || 0).toLocaleString()} |{' '}
+                    {inv.kind === 'stock'
+                      ? `Daily: ${inv.dailyProfitRate}%`
+                      : `ROI: ${inv.roiPercentage}%`}
                   </p>
+                  {inv.kind === 'stock' && (
+                    <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                      Profit earned: ${Number(inv.profit || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                    </p>
+                  )}
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     Duration: {inv.duration} | Started: {new Date(inv.startDate).toLocaleDateString()}
                   </p>
