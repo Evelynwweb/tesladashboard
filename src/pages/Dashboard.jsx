@@ -21,7 +21,7 @@ const EmptyTransactions = ({ type }) => (
   </div>
 );
 
-const TYPE_LABELS = { profit: 'Profit', investment: 'Investment', bonus: 'Bonus', referral: 'Referral' };
+const TYPE_LABELS = { profit: 'Profit', investment: 'Investment', bonus: 'Bonus', referral: 'Referral', admin_adjustment: 'Adjustment' };
 const formatMoney = (amount) => {
   const n = Number(amount) || 0;
   return `${n < 0 ? '-' : ''}${Math.abs(n).toFixed(2)}`;

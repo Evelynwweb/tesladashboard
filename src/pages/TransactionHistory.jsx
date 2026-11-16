@@ -24,6 +24,7 @@ const TYPE_LABELS = {
   investment: 'Investment',
   bonus: 'Bonus',
   referral: 'Referral',
+  admin_adjustment: 'Adjustment',
 };
 const typeLabel = (type) => TYPE_LABELS[type] || type || 'N/A';
 

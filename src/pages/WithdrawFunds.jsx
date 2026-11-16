@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Wallet, ArrowUpRight, Clock, Info } from 'lucide-react';
 import toast from 'react-hot-toast';
+import api from '../api';
+import useAppConfig from '../hooks/useAppConfig';
 
 // Helper to get dynamic label and placeholder based on withdrawal method
 const getDetailsConfig = (methodName) => {
@@ -59,19 +61,19 @@ const WithdrawFunds = () => {
   const [loadingBalance, setLoadingBalance] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  const feePercentage = 10; // 10% fee
+  // Fee and limits are set by the admin (Settings → General); the API
+  // enforces them too. 10% is only shown until the settings arrive.
+  const config = useAppConfig();
+  const feePercentage = Number(config?.withdrawalFeePercent ?? 10);
+  const minWithdrawal = Number(config?.minWithdrawal ?? 0);
+  const maxWithdrawal = Number(config?.maxWithdrawal ?? 0);
 
   // Fetch real user balance
   useEffect(() => {
     const fetchBalance = async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/dashboard`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        const data = await res.json();
-        if (res.ok) {
-          setBalance(data.user.balance);
-        }
+        const data = await api.get('/dashboard');
+        setBalance(Number(data?.user?.balance) || 0);
       } catch {
         toast.error('Could not load balance');
       } finally {
@@ -97,6 +99,14 @@ const WithdrawFunds = () => {
       toast.error('Please enter a valid amount');
       return;
     }
+    if (minWithdrawal && amountValue < minWithdrawal) {
+      toast.error(`Minimum withdrawal is ${minWithdrawal}`);
+      return;
+    }
+    if (maxWithdrawal && amountValue > maxWithdrawal) {
+      toast.error(`Maximum withdrawal is ${maxWithdrawal}`);
+      return;
+    }
     if (isExceedingBalance) {
       toast.error('Insufficient balance to cover amount + fee');
       return;
@@ -114,29 +124,16 @@ const WithdrawFunds = () => {
 
     // Send real API request
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/withdrawals`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
-          amount: parseFloat(amount),
-          method: selectedMethod.name,
-          details: details,
-          wcCode: wcCode,
-        }),
+      await api.post('/withdrawals', {
+        amount: amountValue,
+        method: selectedMethod.name,
+        details,
+        wcCode,
       });
-
-      const data = await res.json();
-      if (res.ok) {
-        toast.success('Withdrawal request submitted successfully!');
-        navigate('/dashboard/withdrawals');
-      } else {
-        toast.error(data.message || 'Submission failed');
-      }
-    } catch {
-      toast.error('Network error. Please try again.');
+      toast.success('Withdrawal request submitted successfully!');
+      navigate('/dashboard/withdrawals');
+    } catch (err) {
+      toast.error(err.message || 'Submission failed');
     } finally {
       setSubmitting(false);
     }
